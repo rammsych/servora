@@ -139,30 +139,6 @@ export default function NewGuidePage() {
 
 
 
-    if (signature) {
-      const blob = await (await fetch(signature)).blob();
-
-      const filePath = `${createdGuide.id}/signature.png`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('service-guide-signatures')
-        .upload(filePath, blob, {
-          contentType: 'image/png',
-        });
-
-      if (!uploadError) {
-        const { data: publicUrlData } = supabase.storage
-          .from('service-guide-signatures')
-          .getPublicUrl(filePath);
-
-        await supabase
-          .from('service_guides')
-          .update({
-            customer_signature_url: publicUrlData.publicUrl,
-          })
-          .eq('id', createdGuide.id);
-      }
-    }
 
 
 
@@ -208,6 +184,32 @@ export default function NewGuidePage() {
       setLoading(false);
       return;
     }
+
+
+    if (signature) {
+  const blob = await (await fetch(signature)).blob();
+
+  const filePath = `${createdGuide.id}/signature.png`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('service-guide-signatures')
+    .upload(filePath, blob, {
+      contentType: 'image/png',
+    });
+
+  if (!uploadError) {
+    const { data: publicUrlData } = supabase.storage
+      .from('service-guide-signatures')
+      .getPublicUrl(filePath);
+
+    await supabase
+      .from('service_guides')
+      .update({
+        customer_signature_url: publicUrlData.publicUrl,
+      })
+      .eq('id', createdGuide.id);
+  }
+}
 
 
     for (const photo of photos) {
