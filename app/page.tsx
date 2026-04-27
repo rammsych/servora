@@ -1,20 +1,5 @@
-'use client'
-
-import { useEffect } from 'react'
-import { supabase } from '@/libs/supabaseClient'
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-
-  useEffect(() => {
-    testConnection()
-  }, [])
-
-  const testConnection = async () => {
-    const { data, error } = await supabase.from('test').select('*')
-
-    console.log('DATA:', data)
-    console.log('ERROR:', error)
-  }
-
-  return <div>Servora funcionando 🚀</div>
+  redirect('/login');
 }
