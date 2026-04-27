@@ -5,6 +5,8 @@ import { useRef, useState, useEffect } from 'react';
 export default function SignaturePad({ onSave }) {
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -15,10 +17,17 @@ export default function SignaturePad({ onSave }) {
     ctx.strokeStyle = '#000';
   }, []);
 
+  const showMessage = (text) => {
+    setMessage(text);
+
+    setTimeout(() => {
+      setMessage('');
+    }, 2500);
+  };
+
   const getPos = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-
     const touch = e.touches ? e.touches[0] : e;
 
     return {
@@ -28,6 +37,8 @@ export default function SignaturePad({ onSave }) {
   };
 
   const startDraw = (e) => {
+    e.preventDefault();
+
     const ctx = canvasRef.current.getContext('2d');
     const pos = getPos(e);
 
@@ -35,10 +46,13 @@ export default function SignaturePad({ onSave }) {
     ctx.moveTo(pos.x, pos.y);
 
     setDrawing(true);
+    setHasSignature(true);
   };
 
   const draw = (e) => {
     if (!drawing) return;
+
+    e.preventDefault();
 
     const ctx = canvasRef.current.getContext('2d');
     const pos = getPos(e);
@@ -54,24 +68,41 @@ export default function SignaturePad({ onSave }) {
   const clear = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+    onSave(null);
+    showMessage('Firma eliminada.');
   };
 
   const save = () => {
+    if (!hasSignature) {
+      showMessage('Primero debes dibujar la firma.');
+      return;
+    }
+
     const canvas = canvasRef.current;
     const dataUrl = canvas.toDataURL('image/png');
+
     onSave(dataUrl);
+    showMessage('Firma guardada correctamente.');
   };
 
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm">
-      <h2 className="text-lg font-bold mb-3">Firma del cliente</h2>
+      <h2 className="text-lg font-bold text-slate-900 mb-2">
+        Firma del cliente
+      </h2>
+
+      <p className="text-sm text-slate-500 mb-3">
+        Firma opcional. El cliente puede firmar con el dedo.
+      </p>
 
       <canvas
         ref={canvasRef}
         width={300}
         height={150}
-        className="border rounded-xl w-full bg-white"
+        className="border rounded-xl w-full bg-white touch-none"
         onMouseDown={startDraw}
         onMouseMove={draw}
         onMouseUp={endDraw}
@@ -85,7 +116,7 @@ export default function SignaturePad({ onSave }) {
         <button
           type="button"
           onClick={clear}
-          className="flex-1 bg-slate-200 py-2 rounded-lg"
+          className="flex-1 bg-slate-200 text-slate-900 py-3 rounded-xl font-semibold"
         >
           Limpiar
         </button>
@@ -93,11 +124,19 @@ export default function SignaturePad({ onSave }) {
         <button
           type="button"
           onClick={save}
-          className="flex-1 bg-blue-600 text-white py-2 rounded-lg"
+          className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold"
         >
           Guardar firma
         </button>
       </div>
+
+      {message && (
+        <div className="fixed bottom-5 left-4 right-4 z-50">
+          <div className="bg-slate-900 text-white rounded-2xl shadow-xl px-4 py-3 text-sm font-medium text-center">
+            {message}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
