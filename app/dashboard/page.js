@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/libs/supabaseClient';
+import AppShell from '@/components/AppShell';
+import { Card, ButtonPrimary, ButtonSecondary } from '@/components/ui.js';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,73 +44,63 @@ export default function DashboardPage() {
     });
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
   return (
-    <main className="min-h-screen bg-slate-100">
-      <header className="bg-slate-950 text-white px-5 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">Servora</h1>
-          <p className="text-xs text-slate-300">
-            Gestión inteligente de guías de servicio
+    <AppShell>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {/* <Card>
+          <p className="text-gray-400 text-sm">Guías creadas hoy</p>
+          <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            {stats.today}
           </p>
-        </div>
+        </Card>
 
-        <button
-          onClick={handleLogout}
-          className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm"
-        >
-          Salir
-        </button>
-      </header>
+        <Card>
+          <p className="text-gray-400 text-sm">Pendientes</p>
+          <p className="text-4xl font-bold mt-2">{stats.pending}</p>
+        </Card>
 
-      <section className="p-5">
-        <h2 className="text-2xl font-bold text-slate-900">
-          Dashboard
-        </h2>
+        <Card>
+          <p className="text-gray-400 text-sm">Aprobadas</p>
+          <p className="text-4xl font-bold mt-2">{stats.approved}</p>
+        </Card> */}
+        <Card>
+          <p className="text-gray-400 text-sm">Guías creadas hoy</p>
+          <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            {stats.today}
+          </p>
+        </Card>
 
-        <div className="grid grid-cols-1 gap-4 mt-5">
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Guías creadas hoy</p>
-            <p className="text-3xl font-bold text-slate-900 mt-2">
-              {stats.today}
-            </p>
-          </div>
+        <Card>
+          <p className="text-gray-400 text-sm">Pendientes</p>
+          <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            {stats.pending}
+          </p>
+        </Card>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Pendientes de revisión</p>
-            <p className="text-3xl font-bold text-slate-900 mt-2">
-              {stats.pending}
-            </p>
-          </div>
+        <Card>
+          <p className="text-gray-400 text-sm">Aprobadas</p>
+          <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            {stats.approved}
+          </p>
+        </Card>
+      </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Aprobadas</p>
-            <p className="text-3xl font-bold text-slate-900 mt-2">
-              {stats.approved}
-            </p>
-          </div>
-        </div>
+      <Card>
+        <h2 className="text-xl font-bold mb-2">Acciones rápidas</h2>
+        <p className="text-gray-400 mb-5">
+          Gestiona tus guías de forma rápida.
+        </p>
 
-        <div className="grid grid-cols-1 gap-3 mt-6">
-          <button
-            onClick={() => router.push('/guides/new')}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-4"
-          >
+        <div className="flex flex-col sm:flex-row gap-3">
+          <ButtonPrimary onClick={() => router.push('/guides/new')}>
             + Crear guía de servicio
-          </button>
+          </ButtonPrimary>
 
-          <button
-            onClick={() => router.push('/guides')}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl py-4"
-          >
+          <ButtonSecondary onClick={() => router.push('/guides')}>
             Ver guías generadas
-          </button>
+          </ButtonSecondary>
         </div>
-      </section>
-    </main>
+      </Card>
+    </AppShell>
   );
 }
