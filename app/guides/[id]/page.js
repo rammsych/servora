@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/libs/supabaseClient';
 import PhotoUploader from '@/components/PhotoUploader';
+import AppShell from '@/components/AppShell';
+import { Card, ButtonSecondary } from '@/components/ui';
 
 export default function GuideDetailPage() {
   const { id } = useParams();
@@ -27,23 +29,14 @@ export default function GuideDetailPage() {
       setGuide(data);
     }
 
-    setLoading(false);
-
-    const { data: photosData, error: photosError } = await supabase
+    const { data: photosData } = await supabase
       .from('service_guide_photos')
       .select('*')
       .eq('guide_id', id)
       .order('created_at', { ascending: true });
 
-    if (!photosError) {
-      setPhotos(photosData || []);
-}
-
-
-
-
-
-
+    setPhotos(photosData || []);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -51,132 +44,221 @@ export default function GuideDetailPage() {
   }, [id]);
 
   if (loading) {
-    return <main className="p-5">Cargando guía...</main>;
+    return (
+      <AppShell>
+        <Card>
+          <p className="text-sm text-gray-400">Cargando guía...</p>
+        </Card>
+      </AppShell>
+    );
   }
 
   if (!guide) {
-    return <main className="p-5">No se encontró la guía.</main>;
+    return (
+      <AppShell>
+        <Card>
+          <p className="text-sm text-red-400">No se encontró la guía.</p>
+        </Card>
+      </AppShell>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <header className="bg-slate-950 text-white px-5 py-4">
+    <AppShell>
+      <div className="mb-6">
         <button
           onClick={() => router.push('/guides')}
-          className="text-sm text-slate-300 mb-2"
+          className="text-sm text-gray-400 hover:text-cyan-300 mb-3"
         >
           ← Volver
         </button>
 
-        <h1 className="text-xl font-bold">
-          Guía N° {guide.guide_number}
-        </h1>
-        <p className="text-xs text-slate-300">
-          Detalle de guía de servicio
-        </p>
-      </header>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <div>
+            <p className="text-sm text-gray-400">SERVORA / Guía</p>
 
-      <section className="p-5 space-y-4">
-        <Card title="Información general">
-          <Row label="Fecha" value={guide.service_date} />
-          <Row label="Hora ingreso" value={guide.start_time} />
-          <Row label="Hora término" value={guide.end_time} />
-          <Row label="Estado" value={guide.status} />
-          <Row label="Tipo mantenimiento" value={guide.maintenance_type} />
-          <Row label="Tipo actividad" value={guide.activity_type} />
-          <Row label="Instalación" value={guide.installation_type} />
+            <h1 className="text-2xl font-bold text-white">
+              Guía N° {guide.guide_number || 'Sin número'}
+            </h1>
+
+            <p className="text-sm text-gray-400">
+              Detalle completo del servicio realizado
+            </p>
+          </div>
+
+          <StatusBadge status={guide.status} />
+        </div>
+      </div>
+
+      <div className="space-y-5 pb-10">
+
+        <Card>
+          <SectionTitle title="Información general" />
+          <Grid>
+            <Info label="Fecha" value={guide.service_date} />
+            <Info label="Hora ingreso" value={guide.start_time} />
+            <Info label="Hora término" value={guide.end_time} />
+            <Info label="Tipo mantenimiento" value={guide.maintenance_type} />
+            <Info label="Tipo actividad" value={guide.activity_type} />
+            <Info label="Instalación" value={guide.installation_type} />
+          </Grid>
         </Card>
 
-        <Card title="Equipo intervenido">
-          <Row label="N° serie" value={guide.equipment_serial} />
-          <Row label="Modelo" value={guide.equipment_model} />
-          <Row label="Marca" value={guide.equipment_brand} />
-          <Row label="Color" value={guide.equipment_color} />
+        <Card>
+          <SectionTitle title="Equipo intervenido" />
+          <Grid>
+            <Info label="N° serie" value={guide.equipment_serial} />
+            <Info label="Modelo" value={guide.equipment_model} />
+            <Info label="Marca" value={guide.equipment_brand} />
+            <Info label="Color" value={guide.equipment_color} />
+          </Grid>
         </Card>
 
-        <Card title="Parámetros">
-          <Row label="Voltaje" value={guide.electrical_voltage} />
-          <Row label="Presión / parámetro" value={guide.electrical_pressure} />
+        <Card>
+          <SectionTitle title="Parámetros técnicos" />
+          <Grid>
+            <Info label="Voltaje" value={guide.electrical_voltage} />
+            <Info label="Presión" value={guide.electrical_pressure} />
+          </Grid>
         </Card>
 
-        <Card title="Actividad realizada">
+        <Card>
+          <SectionTitle title="Actividad realizada" />
           <Text value={guide.activity_description} />
         </Card>
 
-        <Card title="Cambio de componentes">
+        <Card>
+          <SectionTitle title="Cambio de componentes" />
           <Text value={guide.component_changes} />
         </Card>
 
-        <Card title="Observaciones">
+        <Card>
+          <SectionTitle title="Observaciones" />
           <Text value={guide.observations} />
         </Card>
 
-        <Card title="Cliente">
-          <Row label="Nombre" value={guide.customer_name} />
-          <Row label="RUT" value={guide.customer_rut} />
+        <Card>
+          <SectionTitle title="Cliente" />
+          <Grid>
+            <Info label="Nombre" value={guide.customer_name} />
+            <Info label="RUT" value={guide.customer_rut} />
+          </Grid>
         </Card>
 
-        <Card title="Ubicación registrada">
-          <Row label="Latitud" value={guide.latitude} />
-          <Row label="Longitud" value={guide.longitude} />
-          <Row label="Precisión" value={guide.location_accuracy ? `${guide.location_accuracy} m` : '-'} />
+        <Card>
+          <SectionTitle title="Ubicación" />
+          <Grid>
+            <Info label="Latitud" value={guide.latitude} />
+            <Info label="Longitud" value={guide.longitude} />
+            <Info
+              label="Precisión"
+              value={
+                guide.location_accuracy
+                  ? `${guide.location_accuracy} m`
+                  : '-'
+              }
+            />
+          </Grid>
 
           {guide.latitude && guide.longitude && (
             <a
               href={`https://www.google.com/maps?q=${guide.latitude},${guide.longitude}`}
               target="_blank"
-              className="block mt-3 text-blue-600 font-semibold"
+              className="inline-block mt-4 text-sm text-cyan-300 hover:underline"
             >
-              Ver ubicación en Google Maps
+              Ver en Google Maps
             </a>
           )}
         </Card>
-        <PhotoUploader guideId={guide.id} onUploaded={loadGuide} />
-      </section>
-      <Card title="Fotos del servicio">
-        {photos.length === 0 ? (
-          <p className="text-sm text-slate-500">No hay fotos registradas.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {photos.map((photo) => (
-              <a
-                key={photo.id}
-                href={photo.photo_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <img
-                  src={photo.photo_url}
-                  alt="Foto del servicio"
-                  className="w-full h-32 object-cover rounded-xl border"
-                />
-              </a>
-            ))}
-          </div>
-        )}
-      </Card>
-    </main>
+
+        <Card>
+          <SectionTitle title="Fotos del servicio" />
+
+          {photos.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No hay fotos registradas.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {photos.map((photo) => (
+                <a key={photo.id} href={photo.photo_url} target="_blank">
+                  <img
+                    src={photo.photo_url}
+                    className="w-full h-32 object-cover rounded-2xl border border-white/10"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <SectionTitle title="Agregar más fotos" />
+          <PhotoUploader guideId={guide.id} onUploaded={loadGuide} />
+        </Card>
+
+        <div className="flex justify-end">
+          <ButtonSecondary onClick={() => router.push('/guides')}>
+            Volver al listado
+          </ButtonSecondary>
+        </div>
+      </div>
+    </AppShell>
   );
 }
 
-function Card({ title, children }) {
+/* COMPONENTES UI */
+
+function SectionTitle({ title }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm">
-      <h2 className="text-lg font-bold text-slate-900 mb-4">{title}</h2>
-      <div className="space-y-2">{children}</div>
+    <h2 className="text-lg font-semibold text-white mb-4">
+      {title}
+    </h2>
+  );
+}
+
+function Grid({ children }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {children}
     </div>
   );
 }
 
-function Row({ label, value }) {
+function Info({ label, value }) {
   return (
-    <div className="flex justify-between gap-4 text-sm border-b border-slate-100 pb-2">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium text-slate-800 text-right">{value || '-'}</span>
+    <div className="rounded-2xl border border-white/10 bg-[#0f172a] px-4 py-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-sm text-gray-200 font-semibold mt-1">
+        {value || '-'}
+      </p>
     </div>
   );
 }
 
 function Text({ value }) {
-  return <p className="text-sm text-slate-700 whitespace-pre-wrap">{value || '-'}</p>;
+  return (
+    <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
+      {value || '-'}
+    </p>
+  );
+}
+
+function StatusBadge({ status }) {
+  const styles = {
+    draft: 'bg-gray-500/10 text-gray-300 border-gray-500/30',
+    submitted: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
+    approved: 'bg-green-500/10 text-green-300 border-green-500/30',
+    rejected: 'bg-red-500/10 text-red-300 border-red-500/30',
+  };
+
+  return (
+    <span
+      className={`px-3 py-1 rounded-full border text-xs font-semibold ${
+        styles[status] || styles.draft
+      }`}
+    >
+      {status || 'draft'}
+    </span>
+  );
 }
