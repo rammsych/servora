@@ -52,7 +52,7 @@ export default function LoginPage() {
           </h1>
 
           <p className="text-sm text-gray-400 text-center mt-2">
-            Ingresa a Servora 1.1 para gestionar tus guías de servicio.
+            Ingresa a Servora 1.0.2 para gestionar tus guías de servicio.
           </p>
         </div>
 

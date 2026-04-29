@@ -161,7 +161,7 @@ export default function NewGuidePage() {
         location_accuracy: location.location_accuracy,
         status: 'draft',
       })
-      .select('id')
+      .select('id, guide_number')
       .single();
 
     if (error) {
@@ -220,16 +220,66 @@ export default function NewGuidePage() {
       });
     }
 
-    setMessage('Guía guardada correctamente.');
+    try {
+  const emailResponse = await fetch('/api/guides/send-email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+
+    body: JSON.stringify({
+      guide: {
+        id: createdGuide.id,
+        guide_number: createdGuide.guide_number,
+        ...form,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        location_accuracy: location.location_accuracy,
+        status: 'draft',
+      },
+      operatorEmail: user.email,
+    }),
+
+
+
+  });
+
+  const emailResult = await emailResponse.json();
+
+  if (!emailResponse.ok || !emailResult.ok) {
+        console.error('Error enviando correo:', emailResult);
+        setMessage('Guía guardada, pero ocurrió un problema al enviar el correo.');
+      } else {
+        setMessage('Guía guardada y correo enviado correctamente.');
+      }
+    } catch (emailError) {
+      console.error('Error enviando correo:', emailError);
+      setMessage('Guía guardada, pero ocurrió un problema al enviar el correo.');
+    }
+
     setLoading(false);
 
     setTimeout(() => {
       router.push('/guides');
-    }, 1000);
+    }, 1500);
+    
   };
 
   return (
     <AppShell>
+      {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="rounded-3xl border border-white/10 bg-[#0f172a] px-8 py-7 text-center shadow-2xl">
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-cyan-400/30 border-t-cyan-300" />
+              <p className="text-lg font-semibold text-white">
+                Generando guía
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                Guardando datos, generando PDF y enviando correo...
+              </p>
+            </div>
+          </div>
+        )}
       <div className="mb-6">
         <button
           type="button"
@@ -519,16 +569,25 @@ export default function NewGuidePage() {
             </ButtonSecondary>
 
             <ButtonPrimary
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Guardando...' : 'Guardar guía'}
-            </ButtonPrimary>
+            type="submit"
+            disabled={loading}
+            className="w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Guardando y enviando...
+              </span>
+            ) : (
+              'Guardar guía'
+            )}
+          </ButtonPrimary>
           </div>
         </div>
       </form>
     </AppShell>
+    
+
   );
 }
 
