@@ -47,22 +47,6 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        {/* <Card>
-          <p className="text-gray-400 text-sm">Guías creadas hoy</p>
-          <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-            {stats.today}
-          </p>
-        </Card>
-
-        <Card>
-          <p className="text-gray-400 text-sm">Pendientes</p>
-          <p className="text-4xl font-bold mt-2">{stats.pending}</p>
-        </Card>
-
-        <Card>
-          <p className="text-gray-400 text-sm">Aprobadas</p>
-          <p className="text-4xl font-bold mt-2">{stats.approved}</p>
-        </Card> */}
         <Card>
           <p className="text-gray-400 text-sm">Guías creadas hoy</p>
           <p className="text-4xl font-bold mt-2 bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">

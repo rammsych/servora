@@ -30,7 +30,7 @@ export default function AppShell({ children }) {
               SERVORA
             </h1>
             <p className="text-xs text-gray-400">
-              Gestión inteligente de guías 1.0.1
+              Gestión inteligente de guías 1.0.2
             </p>
           </div>
         </div>
