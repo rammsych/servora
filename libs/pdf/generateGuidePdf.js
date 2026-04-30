@@ -1,4 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fs from 'fs/promises';
+import path from 'path';
 
 function value(data) {
   return data || '-';
@@ -14,33 +16,91 @@ function maintenanceLabel(value) {
   return labels[value] || value || '-';
 }
 
-export async function generateGuidePdf(guide) {
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]);
+function currentMonthYear() {
+  const months = [
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
+  ];
+
+  const now = new Date();
+
+  return `${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+async function embedImageFromUrl(pdfDoc, imageUrl) {
+  if (!imageUrl) return null;
+
+  const response = await fetch(imageUrl);
+  const bytes = await response.arrayBuffer();
+
+  if (imageUrl.toLowerCase().includes('.png')) {
+    return pdfDoc.embedPng(bytes);
+  }
+
+  return pdfDoc.embedJpg(bytes);
+}
+
+export async function generateGuidePdf(guide, photoUrl = null) {
+  const templatePath = path.join(
+    process.cwd(),
+    'public',
+    'templates',
+    'INFORME_TEMPLATE_v1.pdf'
+  );
+
+  const templateBytes = await fs.readFile(templatePath);
+  const pdfDoc = await PDFDocument.load(templateBytes);
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  let y = 780;
+  /**
+   * PAGINA 1 - TEMPLATE
+   * Tapamos "AGOSTO 2024" y escribimos el mes actual.
+   */
+  const firstPage = pdfDoc.getPages()[0];
 
-  page.drawText('SERVORA - Guia de Servicio', {
+  firstPage.drawRectangle({
+    x: 230,
+    y: 245,
+    width: 150,
+    height: 22,
+    color: rgb(1, 1, 1),
+  });
+
+  firstPage.drawText(currentMonthYear(), {
+    x: 250,
+    y: 250,
+    size: 13,
+    font: bold,
+    color: rgb(0, 0, 0),
+  });
+
+  /**
+   * PAGINA 2 - DETALLE GUIA
+   */
+  const page = pdfDoc.addPage([595, 842]);
+
+  let y = 790;
+
+  page.drawText('DETALLE DE GUIA DE SERVICIO', {
     x: 50,
     y,
-    size: 18,
+    size: 16,
     font: bold,
     color: rgb(0.05, 0.1, 0.2),
   });
 
-  y -= 35;
+  y -= 30;
 
   page.drawText(`N Guia: ${value(guide.guide_number || guide.id)}`, {
     x: 50,
     y,
     size: 12,
-    font,
+    font: bold,
   });
 
-  y -= 25;
+  y -= 28;
 
   const rows = [
     ['Institucion', guide.institution_name],
@@ -67,7 +127,6 @@ export async function generateGuidePdf(guide) {
       y,
       size: 10,
       font: bold,
-      color: rgb(0.1, 0.1, 0.1),
     });
 
     page.drawText(String(value(val)), {
@@ -75,13 +134,12 @@ export async function generateGuidePdf(guide) {
       y,
       size: 10,
       font,
-      color: rgb(0.15, 0.15, 0.15),
     });
 
-    y -= 18;
+    y -= 17;
   });
 
-  y -= 10;
+  y -= 14;
 
   const blocks = [
     ['Actividad realizada', guide.activity_description],
@@ -95,26 +153,24 @@ export async function generateGuidePdf(guide) {
       y,
       size: 12,
       font: bold,
-      color: rgb(0.05, 0.1, 0.2),
     });
 
-    y -= 18;
+    y -= 16;
 
     const lines = String(value(text)).match(/.{1,85}/g) || ['-'];
 
-    lines.slice(0, 6).forEach((line) => {
+    lines.slice(0, 5).forEach((line) => {
       page.drawText(line, {
         x: 50,
         y,
         size: 10,
         font,
-        color: rgb(0.2, 0.2, 0.2),
       });
 
-      y -= 14;
+      y -= 13;
     });
 
-    y -= 12;
+    y -= 10;
   });
 
   if (guide.latitude && guide.longitude) {
@@ -142,6 +198,36 @@ export async function generateGuidePdf(guide) {
       size: 10,
       font,
     });
+
+    y -= 25;
+  }
+
+  /**
+   * FOTO
+   * Ajusta el nombre del campo si en tu tabla se llama distinto.
+   */
+  // const photoUrl = guide.photo_url || guide.image_url || guide.evidence_url;
+
+  if (photoUrl) {
+    const image = await embedImageFromUrl(pdfDoc, photoUrl);
+
+    if (image) {
+      page.drawText('Fotografia adjunta', {
+        x: 50,
+        y,
+        size: 12,
+        font: bold,
+      });
+
+      y -= 210;
+
+      page.drawImage(image, {
+        x: 50,
+        y,
+        width: 250,
+        height: 190,
+      });
+    }
   }
 
   const pdfBytes = await pdfDoc.save();
