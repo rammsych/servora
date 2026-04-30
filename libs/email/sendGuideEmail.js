@@ -15,7 +15,14 @@ function maintenanceLabel(value) {
 export async function sendGuideEmail({ guide, operatorEmail, pdfBuffer }) {
   const adminEmail = process.env.ADMIN_EMAIL;
 
-  const recipients = [adminEmail].filter(Boolean);
+  const recipients = [
+    adminEmail,
+    operatorEmail,
+  ].filter(Boolean);
+
+  const cc = process.env.EMAIL_CC
+  ? [process.env.EMAIL_CC]
+  : [];
 
   if (recipients.length === 0) {
     throw new Error('No hay destinatarios configurados.');
@@ -26,6 +33,7 @@ export async function sendGuideEmail({ guide, operatorEmail, pdfBuffer }) {
   const { data, error } = await resend.emails.send({
     from: process.env.EMAIL_FROM,
     to: recipients,
+    cc,
     subject: `SERVORA - Nueva guía de servicio N° ${guideNumber}`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #111827;">
