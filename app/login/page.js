@@ -52,7 +52,7 @@ export default function LoginPage() {
   }
 
   if (profile?.role === 'admin' || profile?.role === 'chief_admin') {
-    router.push('/admin/guides');
+    router.push('/admin/kpi');
   } else {
     router.push('/dashboard');
   }
