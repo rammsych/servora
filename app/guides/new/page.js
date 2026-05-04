@@ -159,7 +159,7 @@ export default function NewGuidePage() {
         latitude: location.latitude,
         longitude: location.longitude,
         location_accuracy: location.location_accuracy,
-        status: 'draft',
+        status: 'submitted',
       })
       .select('id, guide_number')
       .single();
@@ -235,7 +235,7 @@ export default function NewGuidePage() {
         latitude: location.latitude,
         longitude: location.longitude,
         location_accuracy: location.location_accuracy,
-        status: 'draft',
+        status: 'submitted',
       },
       operatorEmail: user.email,
     }),

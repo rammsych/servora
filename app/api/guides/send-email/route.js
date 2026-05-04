@@ -37,11 +37,19 @@ export async function POST(request) {
       console.error('Error obteniendo foto de la guía:', photosError);
     }
 
+    console.log('GUIDE ID PARA BUSCAR FOTO:', guide.id);
+    console.log('PHOTOS ENCONTRADAS:', photos);
+
     const photoUrl = photos?.[0]?.photo_url || null;
 
     console.log('PHOTO URL PDF:', photoUrl);
+    console.log('SIGNATURE DATA GUIDE:', {
+      signature_url: guide.signature_url,
+      signature_path: guide.signature_path,
+      signature: guide.signature,
+    });
 
-    const pdfBuffer = await generateGuidePdf(guide, photoUrl);
+const pdfBuffer = await generateGuidePdf(guide, photoUrl);
 
     await sendGuideEmail({
       guide,

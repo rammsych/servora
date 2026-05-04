@@ -27,18 +27,43 @@ function currentMonthYear() {
   return `${months[now.getMonth()]} ${now.getFullYear()}`;
 }
 
+// async function embedImageFromUrl(pdfDoc, imageUrl) {
+//   if (!imageUrl) return null;
+
+//   const response = await fetch(imageUrl);
+//   const bytes = await response.arrayBuffer();
+
+//   if (imageUrl.toLowerCase().includes('.png')) {
+//     return pdfDoc.embedPng(bytes);
+//   }
+
+//   return pdfDoc.embedJpg(bytes);
+// }
+
 async function embedImageFromUrl(pdfDoc, imageUrl) {
-  if (!imageUrl) return null;
+    if (!imageUrl) return null;
 
-  const response = await fetch(imageUrl);
-  const bytes = await response.arrayBuffer();
+    const response = await fetch(imageUrl);
 
-  if (imageUrl.toLowerCase().includes('.png')) {
-    return pdfDoc.embedPng(bytes);
+    if (!response.ok) {
+      console.error('No se pudo cargar la imagen:', imageUrl, response.status);
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    const bytes = await response.arrayBuffer();
+
+    if (contentType.includes('png')) {
+      return pdfDoc.embedPng(bytes);
+    }
+
+    if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+      return pdfDoc.embedJpg(bytes);
+    }
+
+    console.error('Formato de imagen no soportado:', contentType);
+    return null;
   }
-
-  return pdfDoc.embedJpg(bytes);
-}
 
 export async function generateGuidePdf(guide, photoUrl = null) {
   const templatePath = path.join(
@@ -60,22 +85,37 @@ export async function generateGuidePdf(guide, photoUrl = null) {
    */
   const firstPage = pdfDoc.getPages()[0];
 
+  // firstPage.drawRectangle({
+  //   x: 240,     // 👉 un poco más a la izquierda
+  //   y: 245,     // 👉 baja lo suficiente para cubrir el texto original
+  //   width: 200, // 👉 más ancho para cubrir todo "AGOSTO 2024"
+  //   height: 50, // 👉 más alto para tapar completamente
+  //   color: rgb(1, 1, 1),
+  // });
+
+  // firstPage.drawText(currentMonthYear(), {
+  //   x: 265,   // 👉 leve margen interno
+  //   y: 262,   // 👉 centrado vertical dentro del rectángulo
+  //   size: 17, // 👉 más cercano al tamaño real del original
+  //   font: bold,
+  //   color: rgb(0, 0, 0),
+  // });
+
   firstPage.drawRectangle({
-    x: 230,
-    y: 245,
-    width: 150,
-    height: 22,
-    color: rgb(1, 1, 1),
-  });
+  x: 250,
+  y: 222,
+  width: 135,
+  height: 32,
+  color: rgb(1, 1, 1),
+});
 
-  firstPage.drawText(currentMonthYear(), {
-    x: 250,
-    y: 250,
-    size: 13,
-    font: bold,
-    color: rgb(0, 0, 0),
-  });
-
+firstPage.drawText(currentMonthYear(), {
+  x: 265,
+  y: 265,
+  size: 16,
+  font: bold,
+  color: rgb(0, 0, 0),
+});
   /**
    * PAGINA 2 - DETALLE GUIA
    */
@@ -229,6 +269,44 @@ export async function generateGuidePdf(guide, photoUrl = null) {
       });
     }
   }
+
+ // ESPACIO ANTES DE FIRMA
+y -= 40;
+
+if (guide.customer_signature_url) {
+  const signatureImage = await embedImageFromUrl(
+    pdfDoc,
+    guide.customer_signature_url
+  );
+
+  if (signatureImage) {
+    // TÍTULO
+    page.drawText('Firma cliente', {
+      x: 220,   // 👉 centrado
+      y,
+      size: 12,
+      font: bold,
+    });
+
+    y -= 100;
+
+    // IMAGEN FIRMA
+    page.drawImage(signatureImage, {
+      x: 200,   // 👉 centrado visual
+      y,
+      width: 200,
+      height: 80,
+    });
+
+    // LÍNEA DE FIRMA
+    page.drawLine({
+      start: { x: 180, y: y - 10 },
+      end: { x: 420, y: y - 10 },
+      thickness: 1,
+      color: rgb(0, 0, 0),
+    });
+  }
+}
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
