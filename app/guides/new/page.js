@@ -17,7 +17,7 @@ const getCurrentTime = () => {
   return now.toTimeString().slice(0, 5);
 };
 
-export default function NewGuidePage() {
+export default function NewGuidePage({ adminMode = false }) {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -260,7 +260,7 @@ export default function NewGuidePage() {
     setLoading(false);
 
     setTimeout(() => {
-      router.push('/guides');
+      router.push(adminMode ? '/admin/guides' : '/guides');
     }, 1500);
     
   };
@@ -283,7 +283,7 @@ export default function NewGuidePage() {
       <div className="mb-6">
         <button
           type="button"
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push(adminMode ? '/admin/guides' : '/dashboard')}
           className="mb-4 text-sm text-gray-400 hover:text-cyan-300"
         >
           ← Volver al dashboard
@@ -562,7 +562,7 @@ export default function NewGuidePage() {
           <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:justify-end">
             <ButtonSecondary
               type="button"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(adminMode ? '/admin/guides' : '/dashboard')}
               className="w-full sm:w-auto"
             >
               Cancelar

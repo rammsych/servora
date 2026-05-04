@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/libs/supabaseClient';
 import { getCurrentUserProfile } from '@/libs/userRole';
 
+
 const menuItems = [
   {
     label: "KPI",
@@ -16,6 +17,11 @@ const menuItems = [
     label: 'Dashboard guías',
     href: '/admin/guides',
     icon: '📄',
+  },
+    {
+    label: "Generar guía",
+    href: "/admin/guides/new",
+    icon: '📝',
   },
   {
     label: 'Usuarios',
@@ -85,14 +91,26 @@ export default function AdminShell({ children }) {
 
           <div>
             <h1 className="text-lg font-bold">SERVORA</h1>
-            <p className="text-xs text-gray-400">Back Office  1.0.1</p>
+            <p className="text-xs text-gray-400">Back Office  1.0.2</p>
           </div>
         </div>
 
         <nav className="space-y-2">
           {menuItems.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+
+            const active = (() => {
+              // match exacto primero
+              if (pathname === item.href) return true;
+
+              // evitar que /admin/guides capture /admin/guides/new
+              if (item.href === '/admin/guides') {
+                return pathname === '/admin/guides';
+              }
+
+              // resto normal
+              return pathname.startsWith(item.href);
+            })();
 
             return (
               <button
