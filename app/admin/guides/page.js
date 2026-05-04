@@ -150,7 +150,7 @@ export default function AdminGuidesPage() {
   return (
     <AdminShell>
       <div className="mb-6">
-        <p className="text-sm text-gray-400">SERVORA / Back Office 1.0.1</p>
+        <p className="text-sm text-gray-400">SERVORA / Back Office</p>
         <h1 className="mt-1 text-3xl font-bold text-white">
           Dashboard guías
         </h1>

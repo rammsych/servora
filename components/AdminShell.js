@@ -8,6 +8,11 @@ import { getCurrentUserProfile } from '@/libs/userRole';
 
 const menuItems = [
   {
+    label: "KPI",
+    href: "/admin/kpi",
+    icon: '📄',
+  },
+  {
     label: 'Dashboard guías',
     href: '/admin/guides',
     icon: '📄',
