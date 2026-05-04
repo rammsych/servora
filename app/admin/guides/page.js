@@ -121,16 +121,22 @@ export default function AdminGuidesPage() {
             rejection_reason: null,
           }
         : {
-            status: 'rejected',
-            rejected_at: new Date().toISOString(),
-            rejected_by: user?.id || null,
-            rejection_reason: rejectionReason.trim(),
-          };
+              status: 'rejected',
+              rejected_at: new Date().toISOString(),
+              rejected_by: user?.id || null,
+              rejection_reason: rejectionReason.trim(),
+              approved_at: null,
+              approved_by: null,
+            };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('service_guides')
       .update(payload)
-      .eq('id', selectedGuide.id);
+      .eq('id', selectedGuide.id)
+      .select()
+      .single();
+
+    console.log('Resultado evaluación:', { data, error });
 
     if (error) {
       console.error(error);
