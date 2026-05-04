@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/libs/supabaseClient';
 import { Input, ButtonPrimary } from '@/components/ui';
+import { getCurrentUserProfile } from '@/libs/userRole';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,25 +15,57 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+
+  const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+
+  const { data: loginData, error: loginError } =
+    await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+  if (loginError) {
+    alert(loginError.message);
     setLoading(false);
+    return;
+  }
 
-    if (error) {
-      setMessage('Correo o contraseña incorrectos.');
-      return;
-    }
+  const userId = loginData?.user?.id;
 
+  if (!userId) {
+    alert('No se pudo obtener el usuario.');
+    setLoading(false);
+    return;
+  }
+
+ const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error(profileError);
+  }
+
+  if (profile?.role === 'admin' || profile?.role === 'chief_admin') {
+    router.push('/admin/guides');
+  } else {
     router.push('/dashboard');
-  };
+  }
+
+  setLoading(false);
+};
+
+
+
+
+
+
+
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#0a0f1c] px-5">

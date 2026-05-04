@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/libs/supabaseClient';
 import PhotoUploader from '@/components/PhotoUploader';
 import AppShell from '@/components/AppShell';
@@ -10,6 +10,9 @@ import { Card, ButtonSecondary } from '@/components/ui';
 export default function GuideDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+
+  const searchParams = useSearchParams();
+  const backUrl = searchParams.get('back') || '/guides';
 
   const [guide, setGuide] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +70,7 @@ export default function GuideDetailPage() {
     <AppShell>
       <div className="mb-6">
         <button
-          onClick={() => router.push('/guides')}
+          onClick={() => router.push(backUrl)}
           className="text-sm text-gray-400 hover:text-cyan-300 mb-3"
         >
           ← Volver
@@ -198,7 +201,7 @@ export default function GuideDetailPage() {
         </Card>
 
         <div className="flex justify-end">
-          <ButtonSecondary onClick={() => router.push('/guides')}>
+          <ButtonSecondary onClick={() => router.push(backUrl)}>
             Volver al listado
           </ButtonSecondary>
         </div>
