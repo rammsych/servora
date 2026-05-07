@@ -55,17 +55,17 @@ export default function AdminKpiPage() {
 
       const pending = guides.filter((g) => {
         const s = normalizeStatus(g.status);
-        return s === "pending" || s === "pendiente" || s === "draft" || s === "borrador";
+        return s === "submitted" || s === "pending" || s === "pendiente";
       }).length;
 
       const completed = guides.filter((g) => {
         const s = normalizeStatus(g.status);
-        return s === "completed" || s === "completada" || s === "finalizada";
+        return s === "approved" || s === "aprobada";
       }).length;
 
       const cancelled = guides.filter((g) => {
         const s = normalizeStatus(g.status);
-        return s === "cancelled" || s === "anulada" || s === "rechazada";
+        return s === "rejected" || s === "rechazada";
       }).length;
 
       const emergency = guides.filter((g) => {
@@ -98,18 +98,17 @@ export default function AdminKpiPage() {
 
         const status = normalizeStatus(guide.status);
 
-        if (status === "completed" || status === "completada" || status === "finalizada") {
+        if (status === "approved" || status === "aprobada") {
           acc[userName].completed += 1;
         }
 
-        if (status === "pending" || status === "pendiente" || status === "draft" || status === "borrador") {
+        if (status === "submitted" || status === "pending" || status === "pendiente") {
           acc[userName].pending += 1;
         }
 
-        if (status === "cancelled" || status === "anulada" || status === "rechazada") {
+        if (status === "rejected" || status === "rechazada") {
           acc[userName].cancelled += 1;
         }
-
 
    
 
@@ -199,8 +198,8 @@ export default function AdminKpiPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <KpiCard title="Total guías" value={kpis.total} subtitle="Guías generadas" color="cyan" />
           <KpiCard title="Pendientes" value={kpis.pending} subtitle="Guías en borrador" color="amber" />
-          <KpiCard title="Completadas" value={kpis.completed} subtitle={`${completionRate}% de efectividad`} color="emerald" />
-          <KpiCard title="Anuladas / rechazadas" value={kpis.cancelled} subtitle="Guías no válidas" color="rose" />
+          <KpiCard title="Aprobadas" value={kpis.completed} subtitle={`${completionRate}% de efectividad`} color="emerald" />
+          <KpiCard title="Rechazadas" value={kpis.cancelled} subtitle="Guías no válidas" color="rose" />
           <KpiCard
             title="% Emergencias"
             value={`${emergencyPercentage}%`}
@@ -223,8 +222,8 @@ export default function AdminKpiPage() {
 
             <div className="space-y-6">
               <DonutChart label="Pendientes" value={kpis.pending} percent={pendingRate} color="#f59e0b" />
-              <DonutChart label="Completadas" value={kpis.completed} percent={completionRate} color="#10b981" />
-              <DonutChart label="Anuladas" value={kpis.cancelled} percent={cancelledRate} color="#f43f5e" />
+              <DonutChart label="Aprobadas" value={kpis.completed} percent={completionRate} color="#10b981" />
+              <DonutChart label="Rechazadas" value={kpis.cancelled} percent={cancelledRate} color="#f43f5e" />
             </div>
           </div>
 
@@ -238,7 +237,7 @@ export default function AdminKpiPage() {
                   <tr className="border-b border-slate-700 text-slate-400">
                     <th className="py-3 text-left">Operador</th>
                     <th className="py-3 text-center">Total</th>
-                    <th className="py-3 text-center">Completadas</th>
+                    <th className="py-3 text-center">Aprobadas</th>
                     <th className="py-3 text-center">Pendientes</th>
                     <th className="py-3 text-center">Anuladas</th>
                   </tr>
