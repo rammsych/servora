@@ -40,13 +40,18 @@ export default function AdminShell({ children }) {
   const pathname = usePathname();
 
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     validateAccess();
   }, []);
 
   const validateAccess = async () => {
-    const { user, isAdmin } = await getCurrentUserProfile();
+    const {
+      user,
+      isAdmin,
+      profile,
+    } = await getCurrentUserProfile();
 
     if (!user) {
       router.replace('/login');
@@ -57,7 +62,7 @@ export default function AdminShell({ children }) {
       router.replace('/dashboard');
       return;
     }
-
+    setProfile(profile);
     setCheckingAccess(false);
   };
 
@@ -77,6 +82,52 @@ export default function AdminShell({ children }) {
     );
   }
 
+
+  const roleLabel = (() => {
+  if (!profile) return 'Administrador';
+
+  if (profile.approval_role === 'JEO') {
+    return 'Jefe eficiencia operativa';
+  }
+
+  if (profile.approval_role === 'AI') {
+    return 'Analista ingeniería';
+  }
+
+  if (profile.approval_role === 'GP') {
+    return 'Gerente proyecto';
+  }
+
+  if (profile.role === 'admin') {
+    return 'Administrador';
+  }
+
+  return 'Operador';
+})();
+
+const roleStyles = (() => {
+  if (profile?.approval_role === 'JEO') {
+    return 'border-green-400/20 bg-green-500/10 text-green-300';
+  }
+
+  if (profile?.approval_role === 'AI') {
+    return 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300';
+  }
+
+  if (profile?.approval_role === 'GP') {
+    return 'border-purple-400/20 bg-purple-500/10 text-purple-300';
+  }
+
+  return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
+})();
+
+
+
+
+
+
+
+
   return (
     <div className="min-h-screen bg-[#0a0f1c] text-white">
       <aside className="fixed left-0 top-0 hidden h-screen w-72 border-r border-white/10 bg-[#080d18] p-5 lg:block">
@@ -94,6 +145,28 @@ export default function AdminShell({ children }) {
             <p className="text-xs text-gray-400">Back Office  1.0.4</p>
           </div>
         </div>
+
+        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
+  <p className="truncate text-sm font-semibold text-white">
+    {profile?.full_name || 'Usuario'}
+  </p>
+
+  <div className="mt-1 flex items-center gap-2">
+    <span className={`h-2 w-2 rounded-full ${
+      profile?.approval_role === 'JEO'
+        ? 'bg-green-400'
+        : profile?.approval_role === 'AI'
+          ? 'bg-yellow-400'
+          : profile?.approval_role === 'GP'
+            ? 'bg-purple-400'
+            : 'bg-cyan-400'
+    }`} />
+
+    <p className="truncate text-xs text-gray-400">
+      {roleLabel}
+    </p>
+  </div>
+</div>
 
         <nav className="space-y-2">
           {menuItems.map((item) => {
@@ -129,6 +202,16 @@ export default function AdminShell({ children }) {
             );
           })}
         </nav>
+
+
+       
+
+
+
+
+
+
+
 
         <button
           type="button"

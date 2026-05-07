@@ -12,6 +12,14 @@ export async function POST(req) {
 
     const { email, password, full_name, role } = body;
 
+    let finalRole = role;
+    let approval_role = null;
+
+    if (['JEO', 'AI', 'GP'].includes(role)) {
+      finalRole = 'admin';
+      approval_role = role;
+    }
+
     if (!email || !password || !role) {
       return NextResponse.json(
         { ok: false, message: 'Faltan campos.' },
@@ -43,7 +51,8 @@ export async function POST(req) {
         id: userId,
         email,
         full_name,
-        role,
+        role: finalRole,
+        approval_role,
       });
 
     if (profileError) {

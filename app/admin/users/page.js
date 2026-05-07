@@ -251,7 +251,9 @@ const saveUserEdit = async () => {
           >
             <option value="operator">Operador</option>
             <option value="admin">Administrador</option>
-            <option value="chief_admin">Jefe administrador</option>
+            <option value="JEO">Jefe eficiencia operativa</option>
+            <option value="AI">Analista ingeniería</option>
+            <option value="GP">Gerente proyecto</option>
           </select>
         </div>
 
@@ -450,7 +452,9 @@ const saveUserEdit = async () => {
                 >
                   <option value="operator">Operador</option>
                   <option value="admin">Administrador</option>
-                  <option value="chief_admin">Jefe administrador</option>
+                  <option value="JEO">Jefe eficiencia operativa</option>
+                  <option value="AI">Analista ingeniería</option>
+                  <option value="GP">Gerente proyecto</option>
                 </select>
               </div>
 
@@ -498,13 +502,17 @@ function RoleBadge({ role }) {
   const labels = {
     operator: 'Operador',
     admin: 'Administrador',
-    chief_admin: 'Jefe administrador',
+    JEO: 'Jefe eficiencia operativa',
+    AI: 'Analista ingeniería',
+    GP: 'Gerente proyecto',
   };
 
   const styles = {
     operator: 'border-blue-400/30 bg-blue-500/10 text-blue-300',
     admin: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-300',
-    chief_admin: 'border-purple-400/30 bg-purple-500/10 text-purple-300',
+    JEO: 'border-green-400/30 bg-green-500/10 text-green-300',
+    AI: 'border-yellow-400/30 bg-yellow-500/10 text-yellow-300',
+    GP: 'border-purple-400/30 bg-purple-500/10 text-purple-300',
   };
 
   return (
