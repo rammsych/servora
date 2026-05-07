@@ -12,6 +12,8 @@ export default function AdminKpiPage() {
     pending: 0,
     completed: 0,
     cancelled: 0,
+    emergency: 0,
+    corrective: 0,
   });
 
   const [guidesByUser, setGuidesByUser] = useState([]);
@@ -33,12 +35,9 @@ export default function AdminKpiPage() {
           id,
           guide_number,
           status,
+          maintenance_type,
           created_at,
-          operator_id,
-          user_profiles:operator_id (
-            full_name,
-            email
-          )
+          operator_id
         `)
         .order("created_at", { ascending: false });
 
@@ -46,6 +45,9 @@ export default function AdminKpiPage() {
         console.error("Error cargando KPI:", error);
         return;
       }
+
+      console.log("KPI DATA:", data);
+      console.log("KPI TOTAL:", data?.length);
 
       const guides = data || [];
 
@@ -66,18 +68,25 @@ export default function AdminKpiPage() {
         return s === "cancelled" || s === "anulada" || s === "rechazada";
       }).length;
 
-      setKpis({ total, pending, completed, cancelled });
+      const emergency = guides.filter((g) => {
+      const type = String(g.maintenance_type || "").toLowerCase().trim();
+      return type === "emergency" || type === "emergencia";
+    }).length;
+
+    const corrective = guides.filter((g) => {
+      const type = String(g.maintenance_type || "").toLowerCase().trim();
+      return type === "corrective" || type === "correctiva" || type === "correctivo";
+    }).length;
+
+    setKpis({ total, pending, completed, cancelled, emergency, corrective });
 
       const byUser = guides.reduce((acc, guide) => {
-        const userName =
-          guide.user_profiles?.full_name ||
-          guide.user_profiles?.email ||
-          "Sin operador";
+        const userName = guide.operator_id || "Sin operador";
 
         if (!acc[userName]) {
           acc[userName] = {
             name: userName,
-            email: guide.user_profiles?.email || "-",
+            email: "-",
             total: 0,
             completed: 0,
             pending: 0,
@@ -100,6 +109,14 @@ export default function AdminKpiPage() {
         if (status === "cancelled" || status === "anulada" || status === "rechazada") {
           acc[userName].cancelled += 1;
         }
+
+
+   
+
+
+
+
+
 
         return acc;
       }, {});
@@ -126,6 +143,16 @@ export default function AdminKpiPage() {
 
   const cancelledRate =
     kpis.total > 0 ? Math.round((kpis.cancelled / kpis.total) * 100) : 0;
+
+  const emergencyPercentage =
+    kpis.total > 0 ? Math.round((kpis.emergency / kpis.total) * 100) : 0;
+
+  const correctivePercentage =
+    kpis.total > 0 ? Math.round((kpis.corrective / kpis.total) * 100) : 0;
+
+
+
+
 
   if (loading) {
     return (
@@ -174,6 +201,19 @@ export default function AdminKpiPage() {
           <KpiCard title="Pendientes" value={kpis.pending} subtitle="Guías en borrador" color="amber" />
           <KpiCard title="Completadas" value={kpis.completed} subtitle={`${completionRate}% de efectividad`} color="emerald" />
           <KpiCard title="Anuladas / rechazadas" value={kpis.cancelled} subtitle="Guías no válidas" color="rose" />
+          <KpiCard
+            title="% Emergencias"
+            value={`${emergencyPercentage}%`}
+            subtitle={`${kpis.emergency} guías de emergencia`}
+            color="rose"
+          />
+
+          <KpiCard
+            title="% Correctivos"
+            value={`${correctivePercentage}%`}
+            subtitle={`${kpis.corrective} guías correctivas`}
+            color="amber"
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -239,7 +279,7 @@ export default function AdminKpiPage() {
               <div key={guide.id} className="rounded-2xl bg-[#0b1220] border border-slate-700 p-4">
                 <p className="font-black text-white">Guía N° {guide.guide_number}</p>
                 <p className="text-sm text-slate-400 mt-1">
-                  {guide.user_profiles?.full_name || guide.user_profiles?.email || "Sin operador"}
+                  {guide.operator_id || "Sin operador"}
                 </p>
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-xs text-slate-500">{formatDate(guide.created_at)}</span>

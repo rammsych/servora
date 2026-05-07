@@ -171,6 +171,22 @@ export default function NewGuidePage({ adminMode = false }) {
       return;
     }
 
+
+    // Crear aprobaciones ISO automáticamente
+    const approvalsPayload = ['JEO', 'AI', 'GP'].map((type) => ({
+      guide_id: createdGuide.id,
+      approval_type: type,
+      status: 'pending',
+    }));
+
+    const { error: approvalsError } = await supabase
+      .from('guide_approvals')
+      .insert(approvalsPayload);
+
+    if (approvalsError) {
+      console.error('Error creando aprobaciones ISO:', approvalsError);
+    }
+
     if (signature) {
       const blob = await (await fetch(signature)).blob();
       const filePath = `${createdGuide.id}/signature.png`;
