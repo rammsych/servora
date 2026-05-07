@@ -27,7 +27,7 @@ export async function getCurrentUserProfile() {
       profile: null,
       role: null,
       isAdmin: false,
-    };
+    };  
   }
 
   const isAdmin = ['admin', 'chief_admin'].includes(profile.role);

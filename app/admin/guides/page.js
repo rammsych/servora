@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminShell from '@/components/AdminShell';
 import { supabase } from '@/libs/supabaseClient';
+import { getCurrentUserProfile } from '@/libs/userRole';
 import { Card, ButtonPrimary, ButtonSecondary, Input } from '@/components/ui';
+import { Eye, FileDown, Pencil, ClipboardCheck } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
@@ -14,6 +16,7 @@ export default function AdminGuidesPage() {
   const [guides, setGuides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
 
   const [customerFilter, setCustomerFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -28,9 +31,19 @@ export default function AdminGuidesPage() {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from('service_guides')
-      .select('*')
-      .order('created_at', { ascending: false });
+    .from('service_guides')
+    .select(`
+      *,
+      guide_approvals (
+        id,
+        approval_type,
+        status,
+        approved_by,
+        approved_at,
+        comments
+      )
+    `)
+    .order('created_at', { ascending: false });
 
     if (error) {
       console.error(error);
@@ -45,6 +58,15 @@ export default function AdminGuidesPage() {
   useEffect(() => {
     loadGuides();
   }, []);
+
+  useEffect(() => {
+  const loadProfile = async () => {
+    const { profile } = await getCurrentUserProfile();
+    setCurrentProfile(profile);
+  };
+
+  loadProfile();
+}, []);
 
   useEffect(() => {
     setPage(1);
@@ -94,6 +116,13 @@ export default function AdminGuidesPage() {
   const submitEvaluation = async () => {
     if (!selectedGuide) return;
 
+    const approvalRole = currentProfile?.approval_role;
+
+    if (!['JEO', 'AI', 'GP'].includes(approvalRole)) {
+      alert('Tu usuario no tiene permiso para dar visto bueno.');
+      return;
+    }
+
     if (!decision) {
       alert('Debes seleccionar aprobar o rechazar.');
       return;
@@ -110,48 +139,161 @@ export default function AdminGuidesPage() {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const payload =
-      decision === 'approved'
-        ? {
-            status: 'approved',
-            approved_at: new Date().toISOString(),
-            approved_by: user?.id || null,
-            rejected_at: null,
-            rejected_by: null,
-            rejection_reason: null,
-          }
-        : {
-              status: 'rejected',
-              rejected_at: new Date().toISOString(),
-              rejected_by: user?.id || null,
-              rejection_reason: rejectionReason.trim(),
-              approved_at: null,
-              approved_by: null,
-            };
+    const payload = {
+      guide_id: selectedGuide.id,
+      approval_type: approvalRole,
+      status: decision,
+      approved_by: user?.id || null,
+      approved_at: new Date().toISOString(),
+      comments: decision === 'rejected' ? rejectionReason.trim() : null,
+      updated_at: new Date().toISOString(),
+    };
 
-    const { data, error } = await supabase
-      .from('service_guides')
-      .update(payload)
-      .eq('id', selectedGuide.id)
-      .select()
-      .single();
+    const existingApproval = selectedGuide.guide_approvals?.find(
+      (item) => item.approval_type === approvalRole
+    );
 
-    console.log('Resultado evaluación:', { data, error });
+    let error;
+
+    if (existingApproval) {
+      const result = await supabase
+        .from('guide_approvals')
+        .update(payload)
+        .eq('id', existingApproval.id);
+
+      error = result.error;
+    } else {
+      const result = await supabase
+        .from('guide_approvals')
+        .insert(payload);
+
+      error = result.error;
+    }
 
     if (error) {
       console.error(error);
-      alert('No se pudo evaluar la guía.');
-    } else {
-      closeEvaluateModal();
-      await loadGuides();
+      alert('No se pudo guardar el visto bueno.');
+      setUpdatingId(null);
+      return;
     }
 
+    await loadGuides();
+
+    const { data: approvals, error: approvalsError } = await supabase
+      .from('guide_approvals')
+      .select('approval_type, status')
+      .eq('guide_id', selectedGuide.id);
+
+    if (approvalsError) {
+      console.error(approvalsError);
+      alert('Se guardó el visto bueno, pero no se pudo recalcular el estado.');
+      setUpdatingId(null);
+      return;
+    }
+
+    const requiredApprovals = ['JEO', 'AI', 'GP'];
+
+    const allApproved = requiredApprovals.every((type) =>
+      approvals?.some(
+        (approval) =>
+          approval.approval_type === type &&
+          approval.status === 'approved'
+      )
+    );
+
+     const anyRejected = approvals?.some(
+      (approval) => approval.status === 'rejected'
+    );
+
+    console.log('selectedGuide.id:', selectedGuide.id);
+    console.log('approvals:', approvals);
+    console.log('allApproved:', allApproved);
+    console.log('anyRejected:', anyRejected);
+
+   
+    console.log('approvals fresh:', approvals);
+    if (allApproved) {
+      const { error: guideError } = await supabase
+      .from('service_guides')
+      .update({
+        status: 'approved',
+      })
+      .eq('id', selectedGuide.id);
+
+      // console.log('updatedGuide approved:', updatedGuide);
+      console.log('guideError approved:', guideError);
+
+      if (guideError) {
+        console.error(guideError);
+        alert('Los 3 VB están aprobados, pero no se pudo actualizar la guía.');
+        setUpdatingId(null);
+        return;
+      }
+    }
+    if (anyRejected) {
+      const { error: guideError } = await supabase
+        .from('service_guides')
+        .update({
+          status: 'rejected',
+        })
+        .eq('id', selectedGuide.id);
+
+      if (guideError) {
+        console.error(guideError);
+        alert('El VB fue rechazado, pero no se pudo actualizar la guía.');
+        setUpdatingId(null);
+        return;
+      }
+    }
+
+    closeEvaluateModal();
+    await loadGuides();
     setUpdatingId(null);
   };
+
+
 
   const downloadPdf = (guideId) => {
     window.open(`/api/guides/${guideId}/pdf`, '_blank');
   };
+
+  const getApprovalStatus = (guide, type) => {
+    const approval = guide.guide_approvals?.find(
+      (item) => item.approval_type === type
+    );
+
+    return approval?.status || 'pending';
+  };
+
+  const getApprovalClass = (status) => {
+    if (status === 'approved') {
+      return 'border-green-400/40 bg-green-500/15 text-green-300';
+    }
+
+    if (status === 'rejected') {
+      return 'border-yellow-400/40 bg-yellow-500/15 text-yellow-300';
+    }
+
+    return 'border-red-400/40 bg-red-500/15 text-red-300';
+  };
+
+
+    const hasCurrentRoleApproved = (guide) => {
+    const approvalRole = currentProfile?.approval_role;
+
+    if (!approvalRole) return false;
+
+    return guide.guide_approvals?.some(
+      (approval) =>
+        approval.approval_type === approvalRole &&
+        approval.status === 'approved'
+    );
+  };
+
+  const approvalRole = currentProfile?.approval_role;
+  const canApproveJEO = approvalRole === 'JEO';
+  const canApproveAI = approvalRole === 'AI';
+  const canApproveGP = approvalRole === 'GP';
 
   return (
     <AdminShell>
@@ -251,6 +393,7 @@ export default function AdminGuidesPage() {
                   <th className="px-5 py-4">Cliente</th>
                   <th className="px-5 py-4">Institución</th>
                   <th className="px-5 py-4">Estado</th>
+                  <th className="px-5 py-4">VB ISO</th>
                   <th className="px-5 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -258,7 +401,7 @@ export default function AdminGuidesPage() {
               <tbody>
                 {paginatedGuides.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="px-5 py-8 text-center text-gray-400">
+                    <td colSpan="7" className="px-5 py-8 text-center text-gray-400">
                       No hay guías para los filtros seleccionados.
                     </td>
                   </tr>
@@ -286,29 +429,99 @@ export default function AdminGuidesPage() {
                       <StatusBadge status={guide.status || 'submitted'} />
                     </td>
 
+                    <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      {['JEO', 'AI', 'GP'].map((type) => {
+                        const approvalStatus = getApprovalStatus(guide, type);
+
+                        return (
+                          <span
+                            key={type}
+                            title={approvalStatus === 'approved' ? 'Aprobado' : 'Pendiente de aprobación'}
+                            className={`min-w-[42px] rounded-lg border px-2 py-1 text-center text-[11px] font-bold ${getApprovalClass(approvalStatus)}`}
+                          >
+                            {type}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </td>
+
                     <td className="px-5 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+
+
+                      <div className="flex justify-end items-center gap-2">
+
+
                         <ButtonSecondary
                           type="button"
+                          className="px-3 py-2 text-xs min-h-0"
                           onClick={() => router.push(`/guides/${guide.id}?back=/admin/guides`)}
+                          title="Ver guía"
                         >
-                          Ver
+                          <Eye className="h-4 w-4" />
                         </ButtonSecondary>
+
 
                         <ButtonSecondary
                           type="button"
+                          className="px-3 py-2 text-xs min-h-0"
                           onClick={() => downloadPdf(guide.id)}
+                          title="Descargar PDF"
                         >
-                          Descargar PDF
+                          <FileDown className="h-4 w-4" />
                         </ButtonSecondary>
 
-                        <ButtonPrimary
+                        <ButtonSecondary
+                            type="button"
+                            disabled={guide.status === 'approved'}
+                            className={`px-3 py-2 text-xs min-h-0 ${
+                              guide.status === 'approved'
+                                ? 'cursor-not-allowed opacity-40'
+                                : ''
+                            }`}
+                            onClick={() => {
+                              if (guide.status === 'approved') return;
+                              router.push(`/admin/guides/${guide.id}/review`);
+                            }}
+                            title={
+                              guide.status === 'approved'
+                                ? 'La guía aprobada no se puede editar'
+                                : 'Editar guía'
+                            }
+                          >
+                          <Pencil className="h-4 w-4" />
+                        </ButtonSecondary>
+
+                        
+
+                        <button
                           type="button"
-                          disabled={updatingId === guide.id}
+                          disabled={
+                            updatingId === guide.id ||
+                            !['JEO', 'AI', 'GP'].includes(approvalRole) ||
+                            hasCurrentRoleApproved(guide)
+                          }
                           onClick={() => openEvaluateModal(guide)}
+                          title={
+                            hasCurrentRoleApproved(guide)
+                              ? `Ya aprobaste esta guía como ${approvalRole}`
+                              : approvalRole
+                                ? `Dar visto bueno como ${approvalRole}`
+                                : 'Tu usuario no tiene rol de visto bueno'
+                          }
+                          className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+                            hasCurrentRoleApproved(guide)
+                              ? 'border border-green-400/50 bg-green-500/20 text-green-300 cursor-not-allowed opacity-80'
+                              : 'bg-cyan-500 text-white hover:bg-cyan-400'
+                          }`}
                         >
-                          Evaluar
-                        </ButtonPrimary>
+                          <span className="flex items-center gap-2">
+                            <ClipboardCheck className="h-4 w-4" />
+                          </span>
+                        </button>
+
+
                       </div>
                     </td>
                   </tr>
@@ -352,8 +565,8 @@ export default function AdminGuidesPage() {
               Evaluar guía N° {selectedGuide.guide_number || 'Sin número'}
             </h2>
 
-            <p className="mt-2 text-sm text-gray-400">
-              Selecciona si la guía será aprobada o rechazada.
+            <p className="mt-3 inline-flex rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-300">
+              Tu rol de aprobación: {currentProfile?.approval_role || 'Sin rol asignado'}
             </p>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
@@ -380,6 +593,12 @@ export default function AdminGuidesPage() {
               >
                 Rechazar
               </button>
+
+         
+
+
+
+
             </div>
 
             {decision === 'rejected' && (

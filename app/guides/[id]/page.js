@@ -69,12 +69,21 @@ export default function GuideDetailPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <button
+        {/* <button
           onClick={() => router.push(backUrl)}
           className="text-sm text-gray-400 hover:text-cyan-300 mb-3"
         >
           ← Volver
-        </button>
+        </button> */}
+
+        <button
+  type="button"
+  onClick={() => router.push(backUrl || '/admin/guides')}
+  className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-6 py-3 text-sm font-bold tracking-wide text-cyan-200 shadow-xl shadow-cyan-500/10 backdrop-blur-sm transition-all hover:scale-[1.02] hover:border-cyan-300 hover:text-white"
+>
+  <span className="text-xl">←</span>
+  Volver al Dashboard Admin
+</button>
 
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
