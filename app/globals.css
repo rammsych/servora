@@ -54,3 +54,44 @@ body {
   transition: all 0.2s ease;
 }
 
+
+/* FullCalendar - Servora admin */
+.fc {
+  color: #0f172a;
+}
+
+.fc .fc-toolbar-title {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: #475569;
+  font-weight: 700;
+}
+
+.fc .fc-daygrid-day-number {
+  color: #475569;
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.fc .fc-day-other .fc-daygrid-day-number {
+  color: #94a3b8;
+}
+
+.fc .fc-day-today {
+  background: #fef3c7 !important;
+}
+
+.fc .fc-button {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+.fc .fc-button:hover {
+  background: #1e293b !important;
+}
+

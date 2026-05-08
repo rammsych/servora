@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/libs/supabaseClient';
 import { getCurrentUserProfile } from '@/libs/userRole';
+import { CalendarDays } from 'lucide-react';
 
 
 const menuItems = [
@@ -18,10 +19,15 @@ const menuItems = [
     href: '/admin/guides',
     icon: '📄',
   },
-    {
+  {
     label: "Generar guía",
     href: "/admin/guides/new",
     icon: '📝',
+  },
+  {
+    label: 'Programación mensual',
+    href: '/admin/schedule',
+    icon: CalendarDays,
   },
   {
     label: 'Usuarios',
@@ -33,6 +39,7 @@ const menuItems = [
     href: '/admin/settings',
     icon: '⚙️',
   },
+
 ];
 
 export default function AdminShell({ children }) {
@@ -84,42 +91,42 @@ export default function AdminShell({ children }) {
 
 
   const roleLabel = (() => {
-  if (!profile) return 'Administrador';
+    if (!profile) return 'Administrador';
 
-  if (profile.approval_role === 'JEO') {
-    return 'Jefe eficiencia operativa';
-  }
+    if (profile.approval_role === 'JEO') {
+      return 'Jefe eficiencia operativa';
+    }
 
-  if (profile.approval_role === 'AI') {
-    return 'Analista ingeniería';
-  }
+    if (profile.approval_role === 'AI') {
+      return 'Analista ingeniería';
+    }
 
-  if (profile.approval_role === 'GP') {
-    return 'Gerente proyecto';
-  }
+    if (profile.approval_role === 'GP') {
+      return 'Gerente proyecto';
+    }
 
-  if (profile.role === 'admin') {
-    return 'Administrador';
-  }
+    if (profile.role === 'admin') {
+      return 'Administrador';
+    }
 
-  return 'Operador';
-})();
+    return 'Operador';
+  })();
 
-const roleStyles = (() => {
-  if (profile?.approval_role === 'JEO') {
-    return 'border-green-400/20 bg-green-500/10 text-green-300';
-  }
+  const roleStyles = (() => {
+    if (profile?.approval_role === 'JEO') {
+      return 'border-green-400/20 bg-green-500/10 text-green-300';
+    }
 
-  if (profile?.approval_role === 'AI') {
-    return 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300';
-  }
+    if (profile?.approval_role === 'AI') {
+      return 'border-yellow-400/20 bg-yellow-500/10 text-yellow-300';
+    }
 
-  if (profile?.approval_role === 'GP') {
-    return 'border-purple-400/20 bg-purple-500/10 text-purple-300';
-  }
+    if (profile?.approval_role === 'GP') {
+      return 'border-purple-400/20 bg-purple-500/10 text-purple-300';
+    }
 
-  return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
-})();
+    return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
+  })();
 
 
 
@@ -142,31 +149,30 @@ const roleStyles = (() => {
 
           <div>
             <h1 className="text-lg font-bold">SERVORA</h1>
-            <p className="text-xs text-gray-400">Back Office  1.0.4</p>
+            <p className="text-xs text-gray-400">Back Office  1.0.5</p>
           </div>
         </div>
 
         <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-  <p className="truncate text-sm font-semibold text-white">
-    {profile?.full_name || 'Usuario'}
-  </p>
+          <p className="truncate text-sm font-semibold text-white">
+            {profile?.full_name || 'Usuario'}
+          </p>
 
-  <div className="mt-1 flex items-center gap-2">
-    <span className={`h-2 w-2 rounded-full ${
-      profile?.approval_role === 'JEO'
-        ? 'bg-green-400'
-        : profile?.approval_role === 'AI'
-          ? 'bg-yellow-400'
-          : profile?.approval_role === 'GP'
-            ? 'bg-purple-400'
-            : 'bg-cyan-400'
-    }`} />
+          <div className="mt-1 flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${profile?.approval_role === 'JEO'
+              ? 'bg-green-400'
+              : profile?.approval_role === 'AI'
+                ? 'bg-yellow-400'
+                : profile?.approval_role === 'GP'
+                  ? 'bg-purple-400'
+                  : 'bg-cyan-400'
+              }`} />
 
-    <p className="truncate text-xs text-gray-400">
-      {roleLabel}
-    </p>
-  </div>
-</div>
+            <p className="truncate text-xs text-gray-400">
+              {roleLabel}
+            </p>
+          </div>
+        </div>
 
         <nav className="space-y-2">
           {menuItems.map((item) => {
@@ -190,28 +196,23 @@ const roleStyles = (() => {
                 key={item.href}
                 type="button"
                 onClick={() => router.push(item.href)}
-                className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-                  active
-                    ? 'bg-cyan-400/15 text-cyan-300 border border-cyan-400/20'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }`}
+                className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${active
+                  ? 'bg-cyan-400/15 text-cyan-300 border border-cyan-400/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
               >
-                <span>{item.icon}</span>
+                <span className="flex h-5 w-5 items-center justify-center">
+                  {typeof item.icon === 'string' ? (
+                    item.icon
+                  ) : (
+                    <item.icon size={18} />
+                  )}
+                </span>
                 {item.label}
               </button>
             );
           })}
         </nav>
-
-
-       
-
-
-
-
-
-
-
 
         <button
           type="button"
@@ -237,7 +238,14 @@ const roleStyles = (() => {
                 onClick={() => router.push(item.href)}
                 className="whitespace-nowrap rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-300"
               >
-                {item.icon} {item.label}
+                <span className="flex items-center gap-2">
+                  {typeof item.icon === 'string' ? (
+                    item.icon
+                  ) : (
+                    <item.icon size={18} />
+                  )}
+                  {item.label}
+                </span>
               </button>
             ))}
           </div>
