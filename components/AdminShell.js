@@ -5,7 +5,15 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/libs/supabaseClient';
 import { getCurrentUserProfile } from '@/libs/userRole';
-import { CalendarDays } from 'lucide-react';
+import {
+  CalendarDays,
+  FilePlus,
+  FileText,
+  Files,
+  Users,
+  BriefcaseBusiness,
+} from 'lucide-react';
+
 
 
 const menuItems = [
@@ -30,6 +38,34 @@ const menuItems = [
     icon: CalendarDays,
   },
   {
+    label: 'Cotizaciones',
+    icon: FileText,
+    children: [
+      {
+        label: 'Cotizaciones emitidas',
+        href: '/admin/quotations',
+        icon: Files,
+      },
+      {
+        label: 'Generar cotización',
+        href: '/admin/quotations/new',
+        icon: FilePlus,
+      },
+      {
+        label: 'Clientes',
+        href: '/admin/quotations/clients',
+        icon: Users,
+      },
+      {
+        label: 'Servicios',
+        href: '/admin/quotations/services',
+        icon: BriefcaseBusiness,
+      }
+    ]
+  },
+
+
+  {
     label: 'Usuarios',
     href: '/admin/users',
     icon: '👥',
@@ -48,6 +84,8 @@ export default function AdminShell({ children }) {
 
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [profile, setProfile] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
+  const [openMobileMenu, setOpenMobileMenu] = useState(null);
 
   useEffect(() => {
     validateAccess();
@@ -179,39 +217,94 @@ export default function AdminShell({ children }) {
 
 
             const active = (() => {
-              // match exacto primero
+              if (!item.href) return false;
+
               if (pathname === item.href) return true;
 
-              // evitar que /admin/guides capture /admin/guides/new
               if (item.href === '/admin/guides') {
                 return pathname === '/admin/guides';
               }
 
-              // resto normal
               return pathname.startsWith(item.href);
             })();
 
             return (
-              <button
-                key={item.href}
-                type="button"
-                onClick={() => router.push(item.href)}
-                className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${active
-                  ? 'bg-cyan-400/15 text-cyan-300 border border-cyan-400/20'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                  }`}
-              >
-                <span className="flex h-5 w-5 items-center justify-center">
-                  {typeof item.icon === 'string' ? (
-                    item.icon
-                  ) : (
-                    <item.icon size={18} />
+              <div key={item.href || item.label}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.children) {
+                      setOpenMenu(openMenu === item.label ? null : item.label);
+                      return;
+                    }
+
+                    if (item.href) {
+                      router.push(item.href);
+                    }
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${active
+                    ? 'bg-cyan-400/15 text-cyan-300 border border-cyan-400/20'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                >
+                  <span className="flex h-5 w-5 items-center justify-center">
+                    {typeof item.icon === 'string' ? (
+                      item.icon
+                    ) : (
+                      <item.icon size={18} />
+                    )}
+                  </span>
+
+                  <span className="flex-1">{item.label}</span>
+
+                  {item.children && (
+                    <span className="flex items-center gap-2">
+                      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
+                        {item.children.length}
+                      </span>
+
+                      <span
+                        className={`text-sm text-cyan-300 transition-transform ${openMenu === item.label ? 'rotate-90' : ''
+                          }`}
+                      >
+                        ›
+                      </span>
+                    </span>
                   )}
-                </span>
-                {item.label}
-              </button>
+
+
+                </button>
+
+                {item.children && openMenu === item.label && (
+                  <div className="ml-8 mt-1 space-y-1 border-l border-white/10 pl-3">
+                    {item.children.map((child) => {
+                      const childActive = pathname === child.href;
+
+                      return (
+                        <button
+                          key={child.href}
+                          type="button"
+                          onClick={() => router.push(child.href)}
+                          className={`block w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${childActive
+                            ? 'bg-cyan-400/10 text-cyan-300'
+                            : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                            }`}
+                        >
+                          {child.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
+
+
+
+
           })}
+
+
         </nav>
 
         <button
@@ -230,25 +323,120 @@ export default function AdminShell({ children }) {
             <h2 className="text-xl font-bold">Back Office Servora</h2>
           </div>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto lg:hidden">
-            {menuItems.map((item) => (
-              <button
-                key={item.href}
-                type="button"
-                onClick={() => router.push(item.href)}
-                className="whitespace-nowrap rounded-xl border border-white/10 px-4 py-2 text-sm text-gray-300"
-              >
-                <span className="flex items-center gap-2">
-                  {typeof item.icon === 'string' ? (
-                    item.icon
-                  ) : (
-                    <item.icon size={18} />
-                  )}
-                  {item.label}
-                </span>
-              </button>
-            ))}
+
+
+
+
+
+          <div className="mt-4 lg:hidden">
+            <div className="relative rounded-[2rem] border border-white/10 bg-white/[0.04] p-3 shadow-2xl backdrop-blur-xl">
+              <div className="absolute -top-2 left-1/2 h-1.5 w-16 -translate-x-1/2 rounded-full bg-cyan-300/40" />
+
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {menuItems.map((item) => {
+                  const isOpen = openMobileMenu === item.label;
+
+                  const isActive = item.href
+                    ? pathname === item.href || pathname.startsWith(item.href)
+                    : item.children?.some((child) => pathname === child.href);
+
+                  return (
+                    <div key={item.href || item.label} className="flex shrink-0 items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (item.children) {
+                            setOpenMobileMenu(isOpen ? null : item.label);
+                            return;
+                          }
+
+                          if (item.href) {
+                            router.push(item.href);
+                          }
+                        }}
+                        className="min-w-[88px] shrink-0"
+                      >
+                        <div
+                          className={`relative mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition ${isActive
+                            ? 'bg-cyan-400 text-[#0a0f1c]'
+                            : 'bg-white text-slate-700'
+                            }`}
+                        >
+                          {typeof item.icon === 'string' ? (
+                            <span className="text-xl">{item.icon}</span>
+                          ) : (
+                            <item.icon size={22} />
+                          )}
+
+                          {item.children && (
+                            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-400 text-xs font-black text-[#0a0f1c] shadow-lg">
+                              {isOpen ? '‹' : '›'}
+                            </span>
+                          )}
+                        </div>
+
+                        <span
+                          className={`block max-w-[86px] truncate text-center text-[11px] font-bold ${isActive ? 'text-cyan-300' : 'text-gray-300'
+                            }`}
+                        >
+                          {item.label}
+                        </span>
+                      </button>
+
+                      {item.children && isOpen && (
+                        <div className="flex shrink-0 items-center gap-3 border-l border-white/10 pl-3">
+                          {item.children.map((child) => {
+                            const childActive = pathname === child.href;
+
+                            return (
+                              <button
+                                key={child.href}
+                                type="button"
+                                onClick={() => router.push(child.href)}
+                                className="min-w-[92px] shrink-0"
+                              >
+                                <div
+                                  className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg transition ${childActive
+                                    ? 'bg-cyan-400 text-[#0a0f1c]'
+                                    : 'bg-white/[0.08] text-gray-300'
+                                    }`}
+                                >
+                                  {child.icon ? (
+                                    <child.icon size={18} />
+                                  ) : (
+                                    <span className="text-sm">•</span>
+                                  )}
+                                </div>
+
+                                <span
+                                  className={`block max-w-[90px] truncate text-center text-[10px] font-bold ${childActive ? 'text-cyan-300' : 'text-gray-400'
+                                    }`}
+                                >
+                                  {child.label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-10 rounded-r-[2rem] bg-gradient-to-l from-[#0a0f1c] to-transparent" />
+            </div>
+
+            <p className="mt-2 text-center text-[11px] text-gray-500">
+              Desliza el menú para ver más opciones →
+            </p>
           </div>
+
+
+
+
+
+
         </header>
 
         <main className="mx-auto max-w-7xl p-5">
