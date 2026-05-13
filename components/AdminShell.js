@@ -12,44 +12,68 @@ import {
   Files,
   Users,
   BriefcaseBusiness,
+  Building2,
+  BarChart3,
+  LayoutDashboard,
+  ClipboardPenLine,
 } from 'lucide-react';
 
 
 
 const menuItems = [
   {
-    label: "KPI",
-    href: "/admin/kpi",
-    icon: '📄',
-  },
-  {
-    label: 'Dashboard guías',
-    href: '/admin/guides',
-    icon: '📄',
-  },
-  {
-    label: "Generar guía",
-    href: "/admin/guides/new",
-    icon: '📝',
-  },
-  {
-    label: 'Programación mensual',
-    href: '/admin/schedule',
-    icon: CalendarDays,
-  },
-  {
-    label: 'Cotizaciones',
-    icon: FileText,
-    children: [
+    section: 'Operaciones',
+    items: [
       {
-        label: 'Cotizaciones emitidas',
-        href: '/admin/quotations',
-        icon: Files,
+        label: "KPI",
+        href: "/admin/kpi",
+        icon: BarChart3,
       },
       {
-        label: 'Generar cotización',
-        href: '/admin/quotations/new',
-        icon: FilePlus,
+        label: 'Dashboard guías',
+        href: '/admin/guides',
+        icon: LayoutDashboard,
+      },
+      {
+        label: "Generar guía",
+        href: "/admin/guides/new",
+        icon: ClipboardPenLine,
+      },
+      {
+        label: 'Programación mensual',
+        href: '/admin/schedule',
+        icon: CalendarDays,
+      },
+      {
+        label: 'Cotizaciones',
+        icon: FileText,
+        children: [
+          {
+            label: 'Cotizaciones emitidas',
+            href: '/admin/quotations',
+            icon: Files,
+          },
+          {
+            label: 'Generar cotización',
+            href: '/admin/quotations/new',
+            icon: FilePlus,
+          },
+          {
+            label: 'Servicios',
+            href: '/admin/quotations/services',
+            icon: BriefcaseBusiness,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    section: 'Gestión',
+    items: [
+      {
+        label: 'Empresas',
+        href: '/admin/companies',
+        icon: Building2,
       },
       {
         label: 'Clientes',
@@ -57,26 +81,43 @@ const menuItems = [
         icon: Users,
       },
       {
-        label: 'Servicios',
-        href: '/admin/quotations/services',
+        label: 'Proyectos',
+        href: '/admin/projects',
         icon: BriefcaseBusiness,
-      }
-    ]
-  },
-
-
-  {
-    label: 'Usuarios',
-    href: '/admin/users',
-    icon: '👥',
+      },
+    ],
   },
   {
-    label: 'Configuraciones',
-    href: '/admin/settings',
-    icon: '⚙️',
+    section: 'Administración',
+    items: [
+      {
+        label: 'Usuarios',
+        href: '/admin/users',
+        icon: Users,
+      },
+      {
+        label: 'Configuraciones',
+        href: '/admin/settings',
+        icon: '⚙️',
+      },
+    ],
   },
-
 ];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export default function AdminShell({ children }) {
   const router = useRouter();
@@ -187,7 +228,7 @@ export default function AdminShell({ children }) {
 
           <div>
             <h1 className="text-lg font-bold">SERVORA</h1>
-            <p className="text-xs text-gray-400">Back Office  1.0.5</p>
+            <p className="text-xs text-gray-400">Back Office  1.0.6</p>
           </div>
         </div>
 
@@ -212,99 +253,106 @@ export default function AdminShell({ children }) {
           </div>
         </div>
 
-        <nav className="space-y-2">
-          {menuItems.map((item) => {
+        <nav className="space-y-4">
+          {menuItems.map((section) => (
+            <div key={section.section} className="space-y-2">
+              <p className="px-4 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                {section.section}
+              </p>
+
+              {section.items.map((item) => {
 
 
-            const active = (() => {
-              if (!item.href) return false;
+                const active = (() => {
+                  if (!item.href) return false;
 
-              if (pathname === item.href) return true;
+                  if (pathname === item.href) return true;
 
-              if (item.href === '/admin/guides') {
-                return pathname === '/admin/guides';
-              }
+                  if (item.href === '/admin/guides') {
+                    return pathname === '/admin/guides';
+                  }
 
-              return pathname.startsWith(item.href);
-            })();
+                  return pathname.startsWith(item.href);
+                })();
 
-            return (
-              <div key={item.href || item.label}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (item.children) {
-                      setOpenMenu(openMenu === item.label ? null : item.label);
-                      return;
-                    }
+                return (
+                  <div key={item.href || item.label}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (item.children) {
+                          setOpenMenu(openMenu === item.label ? null : item.label);
+                          return;
+                        }
 
-                    if (item.href) {
-                      router.push(item.href);
-                    }
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${active
-                    ? 'bg-cyan-400/15 text-cyan-300 border border-cyan-400/20'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                >
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    {typeof item.icon === 'string' ? (
-                      item.icon
-                    ) : (
-                      <item.icon size={18} />
+                        if (item.href) {
+                          router.push(item.href);
+                        }
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${active
+                        ? 'bg-cyan-400/15 text-cyan-300 border border-cyan-400/20'
+                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                    >
+                      <span className="flex h-5 w-5 items-center justify-center">
+                        {typeof item.icon === 'string' ? (
+                          item.icon
+                        ) : (
+                          <item.icon size={18} />
+                        )}
+                      </span>
+
+                      <span className="flex-1">{item.label}</span>
+
+                      {item.children && (
+                        <span className="flex items-center gap-2">
+                          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
+                            {item.children.length}
+                          </span>
+
+                          <span
+                            className={`text-sm text-cyan-300 transition-transform ${openMenu === item.label ? 'rotate-90' : ''
+                              }`}
+                          >
+                            ›
+                          </span>
+                        </span>
+                      )}
+
+
+                    </button>
+
+                    {item.children && openMenu === item.label && (
+                      <div className="ml-8 mt-1 space-y-1 border-l border-white/10 pl-3">
+                        {item.children.map((child) => {
+                          const childActive = pathname === child.href;
+
+                          return (
+                            <button
+                              key={child.href}
+                              type="button"
+                              onClick={() => router.push(child.href)}
+                              className={`block w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${childActive
+                                ? 'bg-cyan-400/10 text-cyan-300'
+                                : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                                }`}
+                            >
+                              {child.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                  </span>
-
-                  <span className="flex-1">{item.label}</span>
-
-                  {item.children && (
-                    <span className="flex items-center gap-2">
-                      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
-                        {item.children.length}
-                      </span>
-
-                      <span
-                        className={`text-sm text-cyan-300 transition-transform ${openMenu === item.label ? 'rotate-90' : ''
-                          }`}
-                      >
-                        ›
-                      </span>
-                    </span>
-                  )}
-
-
-                </button>
-
-                {item.children && openMenu === item.label && (
-                  <div className="ml-8 mt-1 space-y-1 border-l border-white/10 pl-3">
-                    {item.children.map((child) => {
-                      const childActive = pathname === child.href;
-
-                      return (
-                        <button
-                          key={child.href}
-                          type="button"
-                          onClick={() => router.push(child.href)}
-                          className={`block w-full rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${childActive
-                            ? 'bg-cyan-400/10 text-cyan-300'
-                            : 'text-gray-500 hover:bg-white/5 hover:text-white'
-                            }`}
-                        >
-                          {child.label}
-                        </button>
-                      );
-                    })}
                   </div>
-                )}
-              </div>
-            );
+                );
 
 
 
 
-          })}
+              })}
 
-
+            </div>
+          ))}
         </nav>
 
         <button
@@ -333,7 +381,7 @@ export default function AdminShell({ children }) {
               <div className="absolute -top-2 left-1/2 h-1.5 w-16 -translate-x-1/2 rounded-full bg-cyan-300/40" />
 
               <div className="flex gap-3 overflow-x-auto pb-1">
-                {menuItems.map((item) => {
+                {menuItems.flatMap((section) => section.items).map((item) => {
                   const isOpen = openMobileMenu === item.label;
 
                   const isActive = item.href
