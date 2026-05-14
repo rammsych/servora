@@ -228,7 +228,7 @@ export default function AdminShell({ children }) {
 
           <div>
             <h1 className="text-lg font-bold">SERVORA</h1>
-            <p className="text-xs text-gray-400">Back Office  1.0.6</p>
+            <p className="text-xs text-gray-400">Back Office  1.0.7</p>
           </div>
         </div>
 

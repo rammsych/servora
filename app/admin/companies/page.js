@@ -281,8 +281,8 @@ export default function CompaniesPage() {
           <div className="border-b border-white/10 p-5">
             <h2 className="text-lg font-bold text-white">Listado de empresas</h2>
           </div>
-
-          <div className="overflow-x-auto">
+          {/* 
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-white/[0.03] text-xs uppercase tracking-wider text-gray-500">
                 <tr>
@@ -367,7 +367,239 @@ export default function CompaniesPage() {
                 )}
               </tbody>
             </table>
+            <div className="md:hidden space-y-3 p-4">
+              {companies.map((company) => (
+                <div
+                  key={company.id}
+                  className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-white truncate">
+                        {company.name}
+                      </h3>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        RUT: {company.rut || "Sin RUT"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${company.is_active
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-red-500/15 text-red-300"
+                        }`}
+                    >
+                      {company.is_active ? "Activa" : "Inactiva"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 text-xs text-slate-300">
+                    <p className="break-words">
+                      <span className="text-slate-500">Contacto:</span>{" "}
+                      {company.contact_name || "Sin contacto"}
+                    </p>
+
+                    <p className="break-words">
+                      <span className="text-slate-500">Email:</span>{" "}
+                      {company.contact_email || "Sin email"}
+                    </p>
+
+                    <p>
+                      <span className="text-slate-500">Teléfono:</span>{" "}
+                      {company.contact_phone || "Sin teléfono"}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button
+                      onClick={() => openEditModal(company)}
+                      className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div> */}
+
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="bg-white/[0.03] text-xs uppercase tracking-wider text-gray-500">
+                <tr>
+                  <th className="px-5 py-4">Logo</th>
+                  <th className="px-5 py-4">Razón social</th>
+                  <th className="px-5 py-4">RUT</th>
+                  <th className="px-5 py-4">Código</th>
+                  <th className="px-5 py-4">Contacto</th>
+                  <th className="px-5 py-4">Estado</th>
+                  <th className="px-5 py-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-white/10">
+                {companies.map((company) => (
+                  <tr key={company.id} className="text-gray-300">
+                    <td className="px-5 py-4">
+                      {company.logo_url ? (
+                        <img
+                          src={company.logo_url}
+                          alt={company.business_name}
+                          className="h-10 w-10 rounded-xl bg-white object-contain p-1"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-gray-500">
+                          <Building2 size={18} />
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-4 font-semibold text-white">
+                      {company.business_name}
+                    </td>
+
+                    <td className="px-5 py-4">{company.rut}</td>
+                    <td className="px-5 py-4">{company.code}</td>
+
+                    <td className="px-5 py-4">
+                      <div>{company.contact_email || '-'}</div>
+                      <div className="text-xs text-gray-500">
+                        {company.phone || '-'}
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${company.is_active
+                            ? 'bg-green-500/10 text-green-300'
+                            : 'bg-red-500/10 text-red-300'
+                          }`}
+                      >
+                        {company.is_active ? 'Activa' : 'Inactiva'}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(company)}
+                          className="rounded-xl border border-white/10 p-2 text-gray-300 hover:bg-white/5"
+                          title="Editar"
+                        >
+                          <Pencil size={17} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(company)}
+                          className={`rounded-xl border p-2 ${company.is_active
+                              ? 'border-red-400/20 text-red-300 hover:bg-red-500/10'
+                              : 'border-green-400/20 text-green-300 hover:bg-green-500/10'
+                            }`}
+                          title={company.is_active ? 'Deshabilitar' : 'Habilitar'}
+                        >
+                          <Power size={17} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {companies.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="px-5 py-10 text-center text-gray-500">
+                      No hay empresas registradas.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+
+          <div className="md:hidden space-y-3 p-4">
+            {companies.map((company) => (
+              <div
+                key={company.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-lg"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-bold text-white">
+                      {company.business_name}
+                    </h3>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      RUT: {company.rut || 'Sin RUT'}
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Código: {company.code || 'Sin código'}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${company.is_active
+                      ? 'bg-green-500/10 text-green-300'
+                      : 'bg-red-500/10 text-red-300'
+                      }`}
+                  >
+                    {company.is_active ? 'Activa' : 'Inactiva'}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-2 text-xs text-gray-300">
+                  <p className="break-words">
+                    <span className="text-gray-500">Email:</span>{' '}
+                    {company.contact_email || '-'}
+                  </p>
+
+                  <p>
+                    <span className="text-gray-500">Teléfono:</span>{' '}
+                    {company.phone || '-'}
+                  </p>
+
+                  <p className="break-words">
+                    <span className="text-gray-500">Dirección:</span>{' '}
+                    {company.address || '-'}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(company)}
+                    className="rounded-xl border border-white/10 p-2 text-gray-300 hover:bg-white/5"
+                    title="Editar"
+                  >
+                    <Pencil size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleStatus(company)}
+                    className={`rounded-xl border p-2 ${company.is_active
+                      ? 'border-red-400/20 text-red-300 hover:bg-red-500/10'
+                      : 'border-green-400/20 text-green-300 hover:bg-green-500/10'
+                      }`}
+                    title={company.is_active ? 'Deshabilitar' : 'Habilitar'}
+                  >
+                    <Power size={17} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {companies.length === 0 && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-sm text-gray-500">
+                No hay empresas registradas.
+              </div>
+            )}
+          </div>
+
+
+
         </section>
       </div>
 
