@@ -95,3 +95,68 @@ body {
   background: #1e293b !important;
 }
 
+
+.login-bank-input {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 0 !important;
+  padding: 13px 0 14px 0 !important;
+  color: #ffffff !important;
+  font-size: 20px !important;
+  font-weight: 200 !important;
+  letter-spacing: -0.02em;
+  font-family: 'Inter', sans-serif;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.login-bank-input::placeholder {
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-weight: 200;
+}
+
+.login-bank-input:focus {
+  border-bottom-color: #ffffff !important;
+}
+
+.login-bank-input-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.9);
+}
+
+.login-bank-input-password {
+  flex: 1;
+  min-width: 0;
+  background: transparent !important;
+  border: none !important;
+  padding: 13px 0 14px 0 !important;
+  color: #ffffff !important;
+  font-size: 20px !important;
+  font-weight: 200 !important;
+  letter-spacing: -0.02em;
+  font-family: 'Inter', sans-serif;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.login-bank-input-password::placeholder {
+  color: rgba(255, 255, 255, 0.68) !important;
+  font-weight: 200;
+}
+
+.login-bank-input:-webkit-autofill,
+.login-bank-input:-webkit-autofill:hover,
+.login-bank-input:-webkit-autofill:focus,
+.login-bank-input-password:-webkit-autofill,
+.login-bank-input-password:-webkit-autofill:hover,
+.login-bank-input-password:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  transition: background-color 9999s ease-in-out 0s !important;
+}
