@@ -116,8 +116,8 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-slate-950/35" />
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/25 via-slate-900/10 to-slate-950/35" />
 
-      <section className="relative z-10 flex min-h-screen justify-start px-6 pt-6 md:pt-10 overflow-y-auto">
-        <div className="w-full max-w-[385px]">
+      <section className="relative z-10 flex min-h-screen justify-center px-6 pt-6 md:pt-10 overflow-y-auto">
+        <div className="w-full max-w-[420px] sm:max-w-[460px] md:max-w-[500px]">
           <div className="flex flex-col items-center text-center backdrop-blur-[1px]">
             <div className="relative mb-1 h-[150px] w-[520px] sm:h-[190px] sm:w-[680px]">
               <Image
