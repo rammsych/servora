@@ -116,10 +116,10 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-slate-950/35" />
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/25 via-slate-900/10 to-slate-950/35" />
 
-      <section className="relative z-10 flex min-h-screen justify-center px-6 pt-10 md:pt-12">
+      <section className="relative z-10 flex min-h-screen justify-start px-6 pt-6 md:pt-10 overflow-y-auto">
         <div className="w-full max-w-[385px]">
           <div className="flex flex-col items-center text-center backdrop-blur-[1px]">
-            <div className="relative mb-1 h-[190px] w-[680px]">
+            <div className="relative mb-1 h-[150px] w-[520px] sm:h-[190px] sm:w-[680px]">
               <Image
                 src="/logo-servora.png"
                 alt="SERVORA"
@@ -133,12 +133,12 @@ export default function LoginPage() {
               />
             </div>
 
-            <p className="mt-[-34px] text-[13px] font-light tracking-[0.22em] text-white/80">
+            <p className="mt-[-48px] text-[13px] font-light tracking-[0.22em] text-white/80">
               Backoffice Empresarial
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="mt-12 space-y-8">
+          <form onSubmit={handleLogin} className="mt-8 space-y-6">
             <div>
               <label className="mb-2 block text-[15px] font-semibold text-white">
                 Correo
@@ -213,12 +213,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-16 text-white drop-shadow-lg">
-            <p className="text-[22px] font-light">Observado</p>
+          <div className="mt-10 pb-10 text-white drop-shadow-lg">
+            <p className="text-[18px] sm:text-[22px] font-light">Observado</p>
 
             <div className="mt-4 grid grid-cols-2 gap-8">
               <div>
-                <p className="text-[22px] font-light">
+                <p className="text-[18px] sm:text-[22px] font-light">
                   USD: <span className="font-bold">
                     {indicators.loading ? '...' : formatCLP(indicators.dolar)}
                   </span>
@@ -227,7 +227,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <p className="text-[22px] font-light">
+                <p className="text-[18px] sm:text-[22px] font-light">
                   UF: <span className="font-bold">
                     {indicators.loading ? '...' : formatCLP(indicators.uf)}
                   </span>
