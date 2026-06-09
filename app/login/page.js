@@ -134,7 +134,7 @@ export default function LoginPage() {
             </div>
 
             <p className="mt-[-48px] text-[13px] font-light tracking-[0.22em] text-white/80">
-              Backoffice Empresarial
+              Backoffice Empresarial 1.2.1
             </p>
           </div>
 
