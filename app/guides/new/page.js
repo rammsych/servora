@@ -26,8 +26,13 @@ export default function NewGuidePage({ adminMode = false }) {
   const [photoPreviews, setPhotoPreviews] = useState([]);
   const [signature, setSignature] = useState(null);
 
+  const [holdingCompanies, setHoldingCompanies] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+
   const [form, setForm] = useState({
-    institution_name: '',
+    holding_company_id: '',
+    project_id: '',
     service_date: getTodayDate(),
     start_time: getCurrentTime(),
     end_time: getCurrentTime(),
@@ -56,8 +61,108 @@ export default function NewGuidePage({ adminMode = false }) {
     }));
   }, []);
 
+  useEffect(() => {
+    const loadHoldingCompanies = async () => {
+      const { data, error } = await supabase
+        .from('holding_companies')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error cargando empresas holding:', error);
+        return;
+      }
+
+      setHoldingCompanies(data || []);
+    };
+
+    loadHoldingCompanies();
+  }, []);
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      if (!form.holding_company_id) {
+        setProjects([]);
+        setSelectedClient(null);
+        setForm((prev) => ({
+          ...prev,
+          project_id: '',
+          customer_name: '',
+          customer_rut: '',
+        }));
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+        *,
+        quotation_clients (
+          id,
+          name,
+          rut,
+          email,
+          phone,
+          address,
+          contact_name
+        )
+      `)
+        .eq('holding_company_id', form.holding_company_id)
+        .eq('is_active', true)
+        .order('project_name', { ascending: true });
+
+      if (error) {
+        console.error('Error cargando proyectos:', error);
+        return;
+      }
+
+      setProjects(data || []);
+    };
+
+    loadProjects();
+  }, [form.holding_company_id]);
+
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+
+  //   setForm((prev) => ({
+  //     ...prev,
+  //     [name]: value,
+  //   }));
+  // };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'holding_company_id') {
+      setForm((prev) => ({
+        ...prev,
+        holding_company_id: value,
+        project_id: '',
+        customer_name: '',
+        customer_rut: '',
+      }));
+
+      setSelectedClient(null);
+      return;
+    }
+
+    if (name === 'project_id') {
+      const selectedProject = projects.find((project) => project.id === value);
+      const client = selectedProject?.quotation_clients || null;
+
+      setSelectedClient(client);
+
+      setForm((prev) => ({
+        ...prev,
+        project_id: value,
+        customer_name: client?.contact_name || client?.name || '',
+        customer_rut: client?.rut || '',
+      }));
+
+      return;
+    }
 
     setForm((prev) => ({
       ...prev,
@@ -133,12 +238,25 @@ export default function NewGuidePage({ adminMode = false }) {
       return;
     }
 
+    if (!form.holding_company_id) {
+      setMessage('Debes seleccionar una empresa del holding.');
+      setLoading(false);
+      return;
+    }
+
+    if (!form.project_id) {
+      setMessage('Debes seleccionar un proyecto.');
+      setLoading(false);
+      return;
+    }
+
     const location = await getLocation();
 
     const { data: createdGuide, error } = await supabase
       .from('service_guides')
       .insert({
         operator_id: user.id,
+        project_id: form.project_id || null,
         service_date: form.service_date || new Date().toISOString().slice(0, 10),
         start_time: form.start_time || null,
         end_time: form.end_time || null,
@@ -237,32 +355,34 @@ export default function NewGuidePage({ adminMode = false }) {
     }
 
     try {
-  const emailResponse = await fetch('/api/guides/send-email', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+      const emailResponse = await fetch('/api/guides/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
 
-    body: JSON.stringify({
-      guide: {
-        id: createdGuide.id,
-        guide_number: createdGuide.guide_number,
-        ...form,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        location_accuracy: location.location_accuracy,
-        status: 'submitted',
-      },
-      operatorEmail: user.email,
-    }),
+        body: JSON.stringify({
+          guide: {
+            id: createdGuide.id,
+            guide_number: createdGuide.guide_number,
+            project_id: form.project_id,
+            holding_company_id: form.holding_company_id,
+            ...form,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            location_accuracy: location.location_accuracy,
+            status: 'submitted',
+          },
+          operatorEmail: user.email,
+        }),
 
 
 
-  });
+      });
 
-  const emailResult = await emailResponse.json();
+      const emailResult = await emailResponse.json();
 
-  if (!emailResponse.ok || !emailResult.ok) {
+      if (!emailResponse.ok || !emailResult.ok) {
         console.error('Error enviando correo:', emailResult);
         setMessage('Guía guardada, pero ocurrió un problema al enviar el correo.');
       } else {
@@ -278,24 +398,24 @@ export default function NewGuidePage({ adminMode = false }) {
     setTimeout(() => {
       router.push(adminMode ? '/admin/guides' : '/guides');
     }, 1500);
-    
+
   };
 
   return (
     <AppShell>
       {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="rounded-3xl border border-white/10 bg-[#0f172a] px-8 py-7 text-center shadow-2xl">
-              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-cyan-400/30 border-t-cyan-300" />
-              <p className="text-lg font-semibold text-white">
-                Generando guía
-              </p>
-              <p className="mt-1 text-sm text-gray-400">
-                Guardando datos, generando PDF y enviando correo...
-              </p>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="rounded-3xl border border-white/10 bg-[#0f172a] px-8 py-7 text-center shadow-2xl">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-cyan-400/30 border-t-cyan-300" />
+            <p className="text-lg font-semibold text-white">
+              Generando guía
+            </p>
+            <p className="mt-1 text-sm text-gray-400">
+              Guardando datos, generando PDF y enviando correo...
+            </p>
           </div>
-        )}
+        </div>
+      )}
       <div className="mb-6">
         <button
           type="button"
@@ -319,30 +439,83 @@ export default function NewGuidePage({ adminMode = false }) {
       <form onSubmit={handleSubmit} className="space-y-6 pb-28">
         {message && (
           <div
-            className={`rounded-2xl border px-4 py-3 text-sm ${
-              message.includes('Error')
-                ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-            }`}
+            className={`rounded-2xl border px-4 py-3 text-sm ${message.includes('Error')
+              ? 'border-red-500/30 bg-red-500/10 text-red-300'
+              : 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
+              }`}
           >
             {message}
           </div>
         )}
 
+
+
         <Card>
           <SectionTitle
-            title="Información general"
-            description="Datos principales del servicio."
+            title="Información de operación"
+            description="Selecciona la empresa del holding y el proyecto asociado al servicio."
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Institución"
-              name="institution_name"
-              value={form.institution_name}
+            <Select
+              label="Empresa del holding"
+              name="holding_company_id"
+              value={form.holding_company_id}
               onChange={handleChange}
-            />
+            >
+              <option value="">Seleccionar empresa...</option>
+              {holdingCompanies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name || company.company_name || company.business_name || 'Empresa sin nombre'}
+                </option>
+              ))}
+            </Select>
 
+            <Select
+              label="Proyecto"
+              name="project_id"
+              value={form.project_id}
+              onChange={handleChange}
+            >
+              <option value="">Seleccionar proyecto...</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.project_code} - {project.project_name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </Card>
+
+        <Card>
+          <SectionTitle
+            title="Información del cliente"
+            description="Datos obtenidos automáticamente desde el proyecto seleccionado."
+          />
+
+          {selectedClient ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <InfoBox label="Cliente / Institución" value={selectedClient.name} />
+              <InfoBox label="RUT" value={selectedClient.rut} />
+              <InfoBox label="Contacto" value={selectedClient.contact_name} />
+              <InfoBox label="Correo" value={selectedClient.email} />
+              <InfoBox label="Teléfono" value={selectedClient.phone} />
+              <InfoBox label="Dirección" value={selectedClient.address} />
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-white/10 bg-[#0f172a] px-4 py-4 text-sm text-gray-400">
+              Selecciona un proyecto para cargar la información del cliente.
+            </p>
+          )}
+        </Card>
+
+        <Card>
+          <SectionTitle
+            title="Información general"
+            description="Fecha y horario del servicio realizado."
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Fecha"
               name="service_date"
@@ -368,6 +541,8 @@ export default function NewGuidePage({ adminMode = false }) {
             />
           </div>
         </Card>
+
+
 
         <Card>
           <SectionTitle
@@ -585,24 +760,24 @@ export default function NewGuidePage({ adminMode = false }) {
             </ButtonSecondary>
 
             <ButtonPrimary
-            type="submit"
-            disabled={loading}
-            className="w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                Guardando y enviando...
-              </span>
-            ) : (
-              'Guardar guía'
-            )}
-          </ButtonPrimary>
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Guardando y enviando...
+                </span>
+              ) : (
+                'Guardar guía'
+              )}
+            </ButtonPrimary>
           </div>
         </div>
       </form>
     </AppShell>
-    
+
 
   );
 }
@@ -615,6 +790,20 @@ function SectionTitle({ title, description }) {
       </h3>
       <p className="text-sm text-gray-400 mt-1">
         {description}
+      </p>
+    </div>
+  );
+}
+
+
+function InfoBox({ label, value }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-white">
+        {value || '-'}
       </p>
     </div>
   );

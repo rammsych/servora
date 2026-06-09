@@ -27,45 +27,71 @@ function currentMonthYear() {
   return `${months[now.getMonth()]} ${now.getFullYear()}`;
 }
 
-// async function embedImageFromUrl(pdfDoc, imageUrl) {
-//   if (!imageUrl) return null;
+function formatDate(dateValue) {
+  if (!dateValue) return '-';
 
-//   const response = await fetch(imageUrl);
-//   const bytes = await response.arrayBuffer();
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '-';
 
-//   if (imageUrl.toLowerCase().includes('.png')) {
-//     return pdfDoc.embedPng(bytes);
-//   }
+  return date.toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
 
-//   return pdfDoc.embedJpg(bytes);
-// }
+function monthYearFromDate(dateValue) {
+  if (!dateValue) return currentMonthYear();
+
+  const months = [
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
+  ];
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return currentMonthYear();
+
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function getApproval(approvals, type) {
+  return approvals.find((approval) => approval.approval_type === type) || null;
+}
+
+function userName(user) {
+  return user?.full_name || user?.email || '-';
+}
 
 async function embedImageFromUrl(pdfDoc, imageUrl) {
-    if (!imageUrl) return null;
+  if (!imageUrl) return null;
 
-    const response = await fetch(imageUrl);
+  const response = await fetch(imageUrl);
 
-    if (!response.ok) {
-      console.error('No se pudo cargar la imagen:', imageUrl, response.status);
-      return null;
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    const bytes = await response.arrayBuffer();
-
-    if (contentType.includes('png')) {
-      return pdfDoc.embedPng(bytes);
-    }
-
-    if (contentType.includes('jpeg') || contentType.includes('jpg')) {
-      return pdfDoc.embedJpg(bytes);
-    }
-
-    console.error('Formato de imagen no soportado:', contentType);
+  if (!response.ok) {
+    console.error('No se pudo cargar la imagen:', imageUrl, response.status);
     return null;
   }
 
-export async function generateGuidePdf(guide, photoUrl = null) {
+  const contentType = response.headers.get('content-type') || '';
+  const bytes = await response.arrayBuffer();
+
+  if (contentType.includes('png')) {
+    return pdfDoc.embedPng(bytes);
+  }
+
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+    return pdfDoc.embedJpg(bytes);
+  }
+
+  console.error('Formato de imagen no soportado:', contentType);
+  return null;
+}
+
+export async function generateGuidePdf({
+  guide,
+  approvals = [],
+  photoUrl = null,
+}) {
   const templatePath = path.join(
     process.cwd(),
     'public',
@@ -79,43 +105,257 @@ export async function generateGuidePdf(guide, photoUrl = null) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+  const project = guide.projects || {};
+  const client = project.quotation_clients || {};
+  const holdingCompany = project.holding_companies || {};
+
+  const approvalAI = getApproval(approvals, 'AI');
+  const approvalGP = getApproval(approvals, 'GP');
+
+  const elaboro = userName(guide.operator);
+  const reviso = userName(approvalAI?.profiles);
+  const aprobo = userName(approvalGP?.profiles || guide.approver);
+
+  const reportDate = guide.approved_at || approvalGP?.approved_at || guide.service_date;
+  const reportMonthYear = monthYearFromDate(reportDate);
+
+
+
+
   /**
-   * PAGINA 1 - TEMPLATE
-   * Tapamos "AGOSTO 2024" y escribimos el mes actual.
+   * PAGINA 1 - PORTADA INFORME
    */
   const firstPage = pdfDoc.getPages()[0];
-
-  // firstPage.drawRectangle({
-  //   x: 240,     // 👉 un poco más a la izquierda
-  //   y: 245,     // 👉 baja lo suficiente para cubrir el texto original
-  //   width: 200, // 👉 más ancho para cubrir todo "AGOSTO 2024"
-  //   height: 50, // 👉 más alto para tapar completamente
-  //   color: rgb(1, 1, 1),
-  // });
-
-  // firstPage.drawText(currentMonthYear(), {
-  //   x: 265,   // 👉 leve margen interno
-  //   y: 262,   // 👉 centrado vertical dentro del rectángulo
-  //   size: 17, // 👉 más cercano al tamaño real del original
-  //   font: bold,
-  //   color: rgb(0, 0, 0),
-  // });
+  const { width, height } = firstPage.getSize();
 
   firstPage.drawRectangle({
-  x: 250,
-  y: 222,
-  width: 135,
-  height: 32,
-  color: rgb(1, 1, 1),
-});
+    x: 0,
+    y: 0,
+    width,
+    height,
+    color: rgb(1, 1, 1),
+  });
 
-firstPage.drawText(currentMonthYear(), {
-  x: 265,
-  y: 265,
-  size: 16,
-  font: bold,
-  color: rgb(0, 0, 0),
-});
+  // Logo texto temporal
+  firstPage.drawText('hd', {
+    x: 90,
+    y: height - 95,
+    size: 36,
+    font: bold,
+    color: rgb(0.45, 0.72, 0.68),
+  });
+
+  // Certificación temporal
+  firstPage.drawRectangle({
+    x: width - 170,
+    y: height - 105,
+    width: 95,
+    height: 45,
+    borderColor: rgb(0.75, 0.75, 0.75),
+    borderWidth: 1,
+  });
+
+  firstPage.drawText('Sistema de Gestion', {
+    x: width - 158,
+    y: height - 80,
+    size: 7,
+    font,
+    color: rgb(0.35, 0.35, 0.35),
+  });
+
+  firstPage.drawText('ISO 9001:2015', {
+    x: width - 158,
+    y: height - 92,
+    size: 7,
+    font: bold,
+    color: rgb(0.35, 0.35, 0.35),
+  });
+
+  const serviceType = value(
+    project.service_type ||
+    guide.activity_type ||
+    guide.maintenance_type
+  ).toUpperCase();
+
+  const titlePrefix = 'INFORME';
+  const fullTitle = `${titlePrefix} ${serviceType}`;
+
+
+
+
+
+
+
+  const reportTitle = `INFORME ${serviceType}`;
+
+  const reportTitleWidth = bold.widthOfTextAtSize(
+    reportTitle,
+    16
+  );
+
+  const reportTitleX = (width - reportTitleWidth) / 2;
+
+  firstPage.drawText('INFORME', {
+    x: reportTitleX,
+    y: 560,
+    size: 16,
+    font: bold,
+    color: rgb(0.9, 0.1, 0.08),
+  });
+
+  const informeWidth = bold.widthOfTextAtSize(
+    'INFORME ',
+    16
+  );
+
+  firstPage.drawText(serviceType, {
+    x: reportTitleX + informeWidth,
+    y: 560,
+    size: 16,
+    font: bold,
+    color: rgb(0.26, 0.39, 0.72),
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  const projectName = value(project.project_name).toUpperCase();
+
+
+
+
+
+  const projectLines =
+    projectName.match(/.{1,45}/g) || ['-'];
+
+  let projectY = 520;
+
+  projectLines.slice(0, 3).forEach((line) => {
+    const text = line.trim();
+
+    const lineWidth =
+      bold.widthOfTextAtSize(text, 15);
+
+    const centeredX =
+      (width - lineWidth) / 2;
+
+    firstPage.drawText(text, {
+      x: centeredX,
+      y: projectY,
+      size: 15,
+      font: bold,
+      color: rgb(0.42, 0.65, 0.28),
+    });
+
+    projectY -= 23;
+  });
+
+
+
+
+  const monthWidth =
+    bold.widthOfTextAtSize(
+      reportMonthYear,
+      16
+    );
+
+  firstPage.drawText(reportMonthYear, {
+    x: (width - monthWidth) / 2,
+    y: 390,
+    size: 16,
+    font: bold,
+    color: rgb(0, 0, 0),
+  });
+
+
+
+  const tableX = 80;
+  const tableY = 265;
+  const labelW = 120;
+  const valueW = 330;
+  const rowH = 16;
+
+  const portadaRows = [
+    ['Nº de Proyecto', project.project_code],
+    ['Solicitante', client.name],
+    ['Ubicación', [project.location, project.commune, project.region].filter(Boolean).join(', ')],
+    ['Orden de Compra', project.purchase_order],
+    ['Elaboró', elaboro],
+    ['Revisó', reviso],
+    ['Aprobó', aprobo],
+    ['Fecha de Informe', formatDate(reportDate)],
+    ['Revisión', '0'],
+  ];
+
+  portadaRows.forEach(([label, val], index) => {
+    const y = tableY - index * rowH;
+    const bg = index % 2 === 0 ? rgb(0.9, 0.9, 0.9) : rgb(1, 1, 1);
+
+    firstPage.drawRectangle({
+      x: tableX,
+      y,
+      width: labelW + valueW,
+      height: rowH,
+      color: bg,
+    });
+
+    firstPage.drawText(label, {
+      x: tableX + 6,
+      y: y + 4,
+      size: 9,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    firstPage.drawText(String(value(val)), {
+      x: tableX + labelW + 6,
+      y: y + 4,
+      size: 9,
+      font,
+      color: rgb(0, 0, 0),
+    });
+  });
+
+  firstPage.drawLine({
+    start: { x: tableX, y: tableY + rowH },
+    end: { x: tableX + labelW + valueW, y: tableY + rowH },
+    thickness: 0.5,
+    color: rgb(0.7, 0.7, 0.7),
+  });
+
+  firstPage.drawLine({
+    start: { x: 90, y: 70 },
+    end: { x: width - 70, y: 70 },
+    thickness: 0.5,
+    color: rgb(0.65, 0.72, 0.85),
+  });
+
+  firstPage.drawText('HIDENER SpA / Av. Las Condes 10415 of. 002B SB1 - Las Condes-Santiago / kim.caro@hidener.cl', {
+    x: 105,
+    y: 48,
+    size: 8,
+    font,
+    color: rgb(0.45, 0.45, 0.45),
+  });
+
+
+
+
+
+
+
+
   /**
    * PAGINA 2 - DETALLE GUIA
    */
@@ -143,7 +383,12 @@ firstPage.drawText(currentMonthYear(), {
   y -= 28;
 
   const rows = [
-    ['Institucion', guide.institution_name],
+    ['Empresa holding', holdingCompany.business_name],
+    ['Proyecto', project.project_name],
+    ['Codigo proyecto', project.project_code],
+    ['Cliente / Institucion', client.name],
+    ['Orden de compra', project.purchase_order],
+    ['Ubicacion', [project.location, project.commune, project.region].filter(Boolean).join(', ')],
     ['Fecha servicio', guide.service_date],
     ['Hora ingreso', guide.start_time],
     ['Hora termino', guide.end_time],
@@ -270,43 +515,43 @@ firstPage.drawText(currentMonthYear(), {
     }
   }
 
- // ESPACIO ANTES DE FIRMA
-y -= 40;
+  // ESPACIO ANTES DE FIRMA
+  y -= 40;
 
-if (guide.customer_signature_url) {
-  const signatureImage = await embedImageFromUrl(
-    pdfDoc,
-    guide.customer_signature_url
-  );
+  if (guide.customer_signature_url) {
+    const signatureImage = await embedImageFromUrl(
+      pdfDoc,
+      guide.customer_signature_url
+    );
 
-  if (signatureImage) {
-    // TÍTULO
-    page.drawText('Firma cliente', {
-      x: 220,   // 👉 centrado
-      y,
-      size: 12,
-      font: bold,
-    });
+    if (signatureImage) {
+      // TÍTULO
+      page.drawText('Firma cliente', {
+        x: 220,   // 👉 centrado
+        y,
+        size: 12,
+        font: bold,
+      });
 
-    y -= 100;
+      y -= 100;
 
-    // IMAGEN FIRMA
-    page.drawImage(signatureImage, {
-      x: 200,   // 👉 centrado visual
-      y,
-      width: 200,
-      height: 80,
-    });
+      // IMAGEN FIRMA
+      page.drawImage(signatureImage, {
+        x: 200,   // 👉 centrado visual
+        y,
+        width: 200,
+        height: 80,
+      });
 
-    // LÍNEA DE FIRMA
-    page.drawLine({
-      start: { x: 180, y: y - 10 },
-      end: { x: 420, y: y - 10 },
-      thickness: 1,
-      color: rgb(0, 0, 0),
-    });
+      // LÍNEA DE FIRMA
+      page.drawLine({
+        start: { x: 180, y: y - 10 },
+        end: { x: 420, y: y - 10 },
+        thickness: 1,
+        color: rgb(0, 0, 0),
+      });
+    }
   }
-}
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
