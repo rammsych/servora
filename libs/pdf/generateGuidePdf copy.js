@@ -23,6 +23,7 @@ function currentMonthYear() {
   ];
 
   const now = new Date();
+
   return `${months[now.getMonth()]} ${now.getFullYear()}`;
 }
 
@@ -61,66 +62,29 @@ function userName(user) {
   return user?.full_name || user?.email || '-';
 }
 
-function centerText(page, text, y, size, font, color, pageWidth) {
-  const textWidth = font.widthOfTextAtSize(text, size);
-
-  page.drawText(text, {
-    x: (pageWidth - textWidth) / 2,
-    y,
-    size,
-    font,
-    color,
-  });
-}
-
 async function embedImageFromUrl(pdfDoc, imageUrl) {
   if (!imageUrl) return null;
 
-  try {
-    const response = await fetch(imageUrl);
+  const response = await fetch(imageUrl);
 
-    if (!response.ok) {
-      console.error('No se pudo cargar la imagen:', imageUrl, response.status);
-      return null;
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    const bytes = await response.arrayBuffer();
-
-    if (contentType.includes('png')) {
-      return pdfDoc.embedPng(bytes);
-    }
-
-    if (contentType.includes('jpeg') || contentType.includes('jpg')) {
-      return pdfDoc.embedJpg(bytes);
-    }
-
-    console.error('Formato de imagen no soportado:', contentType);
-    return null;
-  } catch (error) {
-    console.error('Error cargando imagen remota:', error);
+  if (!response.ok) {
+    console.error('No se pudo cargar la imagen:', imageUrl, response.status);
     return null;
   }
-}
 
-async function embedLocalImage(pdfDoc, imagePath) {
-  try {
-    const bytes = await fs.readFile(imagePath);
-    const ext = path.extname(imagePath).toLowerCase();
+  const contentType = response.headers.get('content-type') || '';
+  const bytes = await response.arrayBuffer();
 
-    if (ext === '.png') {
-      return await pdfDoc.embedPng(bytes);
-    }
-
-    if (ext === '.jpg' || ext === '.jpeg') {
-      return await pdfDoc.embedJpg(bytes);
-    }
-
-    return null;
-  } catch (error) {
-    console.error('No se pudo cargar imagen local:', imagePath, error);
-    return null;
+  if (contentType.includes('png')) {
+    return pdfDoc.embedPng(bytes);
   }
+
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+    return pdfDoc.embedJpg(bytes);
+  }
+
+  console.error('Formato de imagen no soportado:', contentType);
+  return null;
 }
 
 export async function generateGuidePdf({
@@ -155,6 +119,9 @@ export async function generateGuidePdf({
   const reportDate = guide.approved_at || approvalGP?.approved_at || guide.service_date;
   const reportMonthYear = monthYearFromDate(reportDate);
 
+
+
+
   /**
    * PAGINA 1 - PORTADA INFORME
    */
@@ -169,119 +136,151 @@ export async function generateGuidePdf({
     color: rgb(1, 1, 1),
   });
 
-  /**
-   * LOGO EMPRESA - ARRIBA IZQUIERDA
-   */
+  // Logo texto temporal
   if (holdingCompany.logo_url) {
     const companyLogo = await embedImageFromUrl(pdfDoc, holdingCompany.logo_url);
 
     if (companyLogo) {
       firstPage.drawImage(companyLogo, {
-        x: 88,
-        y: height - 120,
+        x: 85,
+        y: height - 125,
         width: 85,
-        height: 70,
+        height: 75,
       });
     }
   }
 
-  /**
-   * LOGO TÜV - ARRIBA DERECHA
-   * Debe existir en: public/images/tuv-certificado.png
-   */
-  const tuvLogoPath = path.join(
-    process.cwd(),
-    'public',
-    'images',
-    'tuv-certificado.png'
-  );
+  // Certificación temporal
+  const tuvLogoPath = `${process.cwd()}/public/images/tuv-certificado.png`;
 
-  const tuvLogo = await embedLocalImage(pdfDoc, tuvLogoPath);
+  try {
+    const tuvBytes = await fs.readFile(tuvLogoPath);
+    const tuvLogo = await pdfDoc.embedPng(tuvBytes);
 
-  if (tuvLogo) {
     firstPage.drawImage(tuvLogo, {
-      x: width - 210,
-      y: height - 120,
-      width: 145,
-      height: 75,
+      x: width - 205,
+      y: height - 125,
+      width: 155,
+      height: 90,
     });
+  } catch (error) {
+    console.error('No se pudo cargar logo TÜV:', error);
   }
 
-  /**
-   * TITULO PRINCIPAL CENTRADO
-   */
   const serviceType = value(
     project.service_type ||
     guide.activity_type ||
-    guide.maintenance_type ||
-    'TIPO SERVICIO'
+    guide.maintenance_type
   ).toUpperCase();
 
-  const fullTitle = `INFORME ${serviceType}`;
-  const fullTitleWidth = bold.widthOfTextAtSize(fullTitle, 16);
-  const titleX = (width - fullTitleWidth) / 2;
+  const titlePrefix = 'INFORME';
+  const fullTitle = `${titlePrefix} ${serviceType}`;
+
+
+
+
+
+
+
+  const reportTitle = `INFORME ${serviceType}`;
+
+  const reportTitleWidth = bold.widthOfTextAtSize(
+    reportTitle,
+    16
+  );
+
+  const reportTitleX = (width - reportTitleWidth) / 2;
 
   firstPage.drawText('INFORME', {
-    x: titleX,
-    y: 548,
+    x: reportTitleX,
+    y: 545,
     size: 16,
     font: bold,
     color: rgb(0.9, 0.1, 0.08),
   });
 
-  const informeWidth = bold.widthOfTextAtSize('INFORME ', 16);
+  const informeWidth = bold.widthOfTextAtSize(
+    'INFORME ',
+    16
+  );
 
   firstPage.drawText(serviceType, {
-    x: titleX + informeWidth,
-    y: 548,
+    x: reportTitleX + informeWidth,
+    y: 545,
     size: 16,
     font: bold,
     color: rgb(0.26, 0.39, 0.72),
   });
 
-  /**
-   * NOMBRE PROYECTO CENTRADO
-   */
-  const projectName = value(project.project_name).toUpperCase();
-  const projectLines = projectName.match(/.{1,45}/g) || ['-'];
 
-  let projectY = 508;
+
+
+
+
+
+
+
+
+
+
+
+
+
+  const projectName = value(project.project_name).toUpperCase();
+
+
+
+
+
+  const projectLines =
+    projectName.match(/.{1,45}/g) || ['-'];
+
+  let projectY = 500;
 
   projectLines.slice(0, 3).forEach((line) => {
-    centerText(
-      firstPage,
-      line.trim(),
-      projectY,
-      15,
-      bold,
-      rgb(0.42, 0.65, 0.28),
-      width
-    );
+    const text = line.trim();
 
-    projectY -= 22;
+    const lineWidth =
+      bold.widthOfTextAtSize(text, 15);
+
+    const centeredX =
+      (width - lineWidth) / 2;
+
+    firstPage.drawText(text, {
+      x: centeredX,
+      y: projectY,
+      size: 15,
+      font: bold,
+      color: rgb(0.42, 0.65, 0.28),
+    });
+
+    projectY -= 23;
   });
 
-  /**
-   * MES Y AÑO CENTRADO
-   */
-  centerText(
-    firstPage,
-    reportMonthYear,
-    372,
-    16,
-    bold,
-    rgb(0, 0, 0),
-    width
-  );
 
-  /**
-   * TABLA PORTADA
-   */
-  const labelW = 150;
-  const valueW = 360;
-  const rowH = 18;
-  const tableX = (width - labelW - valueW) / 2;
-  const tableY = 250;
+
+
+  const monthWidth =
+    bold.widthOfTextAtSize(
+      reportMonthYear,
+      16
+    );
+
+  firstPage.drawText(reportMonthYear, {
+    x: (width - monthWidth) / 2,
+    y: 360,
+    size: 16,
+    font: bold,
+    color: rgb(0, 0, 0),
+  });
+
+
+
+  const tableX = 80;
+  const tableY = 205;
+  const labelW = 120;
+  const valueW = 330;
+  const rowH = 16;
 
   const portadaRows = [
     ['Nº de Proyecto', project.project_code],
@@ -308,16 +307,16 @@ export async function generateGuidePdf({
     });
 
     firstPage.drawText(label, {
-      x: tableX + 8,
-      y: y + 5,
+      x: tableX + 6,
+      y: y + 4,
       size: 9,
       font: bold,
       color: rgb(0, 0, 0),
     });
 
     firstPage.drawText(String(value(val)), {
-      x: tableX + labelW + 8,
-      y: y + 5,
+      x: tableX + labelW + 6,
+      y: y + 4,
       size: 9,
       font,
       color: rgb(0, 0, 0),
@@ -328,36 +327,30 @@ export async function generateGuidePdf({
     start: { x: tableX, y: tableY + rowH },
     end: { x: tableX + labelW + valueW, y: tableY + rowH },
     thickness: 0.5,
-    color: rgb(0.6, 0.6, 0.6),
+    color: rgb(0.7, 0.7, 0.7),
   });
 
   firstPage.drawLine({
-    start: { x: tableX, y: tableY - portadaRows.length * rowH },
-    end: { x: tableX + labelW + valueW, y: tableY - portadaRows.length * rowH },
+    start: { x: 90, y: 70 },
+    end: { x: width - 70, y: 70 },
     thickness: 0.5,
-    color: rgb(0.6, 0.6, 0.6),
+    color: rgb(0.65, 0.72, 0.85),
   });
 
-  /**
-   * FOOTER
-   */
-  firstPage.drawLine({
-    start: { x: 75, y: 72 },
-    end: { x: width - 75, y: 72 },
-    thickness: 0.8,
-    color: rgb(0.2, 0.45, 0.9),
+  firstPage.drawText('HIDENER SpA / Av. Las Condes 10415 of. 002B SB1 - Las Condes-Santiago / kim.caro@hidener.cl', {
+    x: 105,
+    y: 48,
+    size: 8,
+    font,
+    color: rgb(0.45, 0.45, 0.45),
   });
 
-  firstPage.drawText(
-    'HIDENER SpA / Av. Las Condes 10415 of. 002B SB1 - Las Condes-Santiago / kim.caro@hidener.cl',
-    {
-      x: 105,
-      y: 48,
-      size: 8,
-      font,
-      color: rgb(0.45, 0.45, 0.45),
-    }
-  );
+
+
+
+
+
+
 
   /**
    * PAGINA 2 - DETALLE GUIA
@@ -490,6 +483,12 @@ export async function generateGuidePdf({
     y -= 25;
   }
 
+  /**
+   * FOTO
+   * Ajusta el nombre del campo si en tu tabla se llama distinto.
+   */
+  // const photoUrl = guide.photo_url || guide.image_url || guide.evidence_url;
+
   if (photoUrl) {
     const image = await embedImageFromUrl(pdfDoc, photoUrl);
 
@@ -512,6 +511,7 @@ export async function generateGuidePdf({
     }
   }
 
+  // ESPACIO ANTES DE FIRMA
   y -= 40;
 
   if (guide.customer_signature_url) {
@@ -521,8 +521,9 @@ export async function generateGuidePdf({
     );
 
     if (signatureImage) {
+      // TÍTULO
       page.drawText('Firma cliente', {
-        x: 220,
+        x: 220,   // 👉 centrado
         y,
         size: 12,
         font: bold,
@@ -530,13 +531,15 @@ export async function generateGuidePdf({
 
       y -= 100;
 
+      // IMAGEN FIRMA
       page.drawImage(signatureImage, {
-        x: 200,
+        x: 200,   // 👉 centrado visual
         y,
         width: 200,
         height: 80,
       });
 
+      // LÍNEA DE FIRMA
       page.drawLine({
         start: { x: 180, y: y - 10 },
         end: { x: 420, y: y - 10 },
