@@ -38,7 +38,8 @@ export async function GET(request, context) {
       ),
       holding_companies (
         id,
-        business_name
+        business_name,
+        logo_url
       )
     ),
     operator:profiles!service_guides_operator_id_fkey (
