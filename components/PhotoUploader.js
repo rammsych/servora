@@ -6,11 +6,18 @@ import { supabase } from '@/libs/supabaseClient';
 export default function PhotoUploader({ guideId, onUploaded }) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [description, setDescription] = useState('');
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files || []);
 
     if (files.length === 0) return;
+
+    if (!description.trim()) {
+      setMessage('Debes ingresar una descripción antes de subir la fotografía.');
+      e.target.value = '';
+      return;
+    }
 
     setUploading(true);
     setMessage('');
@@ -39,12 +46,17 @@ export default function PhotoUploader({ guideId, onUploaded }) {
         guide_id: guideId,
         photo_url: publicUrlData.publicUrl,
         photo_path: fileName,
+        description: description.trim(),
       });
     }
 
     setUploading(false);
     setMessage('Foto(s) subida(s) correctamente.');
+    setDescription('');
+
     if (onUploaded) onUploaded();
+
+    e.target.value = '';
   };
 
   return (
@@ -54,8 +66,16 @@ export default function PhotoUploader({ guideId, onUploaded }) {
       </h2>
 
       <p className="text-sm text-slate-500 mb-4">
-        Puedes tomar fotos directamente desde el celular o subir imágenes existentes.
+        Ingresa una descripción obligatoria antes de subir cada fotografía.
       </p>
+
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Descripción obligatoria de la fotografía"
+        rows={3}
+        className="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500"
+      />
 
       <input
         type="file"

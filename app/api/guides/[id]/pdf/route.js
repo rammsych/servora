@@ -11,44 +11,44 @@ export async function GET(request, context) {
   try {
     const params = await context.params;
     const { id } = params;
+
     console.log('ID recibido:', id);
 
     const { data: guide, error: guideError } = await supabase
       .from('service_guides')
       .select(`
-    *,
-    projects (
-      id,
-      project_code,
-      project_name,
-      service_type,
-      purchase_order,
-      location,
-      commune,
-      region,
-      project_manager,
-      quotation_clients (
-        id,
-        name,
-        rut,
-        email,
-        phone,
-        address,
-        contact_name
-      ),
-      holding_companies (
-        id,
-        business_name,
-        logo_url
-      )
-    ),
-    operator:profiles!service_guides_operator_id_fkey (
-      id,
-      full_name,
-      email
-    )
-    
-  `)
+        *,
+        projects (
+          id,
+          project_code,
+          project_name,
+          service_type,
+          purchase_order,
+          location,
+          commune,
+          region,
+          project_manager,
+          quotation_clients (
+            id,
+            name,
+            rut,
+            email,
+            phone,
+            address,
+            contact_name
+          ),
+          holding_companies (
+            id,
+            business_name,
+            logo_url
+          )
+        ),
+        operator:profiles!service_guides_operator_id_fkey (
+          id,
+          full_name,
+          email
+        )
+      `)
       .eq('id', id)
       .single();
 
@@ -63,22 +63,21 @@ export async function GET(request, context) {
       );
     }
 
-
     const { data: approvals, error: approvalsError } = await supabase
       .from('guide_approvals')
       .select(`
-                id,
-                approval_type,
-                status,
-                approved_at,
-                comments,
-                approved_by,
-                profiles:profiles!guide_approvals_approved_by_fkey (
-                  id,
-                  full_name,
-                  email
-                )
-              `)
+        id,
+        approval_type,
+        status,
+        approved_at,
+        comments,
+        approved_by,
+        profiles:profiles!guide_approvals_approved_by_fkey (
+          id,
+          full_name,
+          email
+        )
+      `)
       .eq('guide_id', id)
       .order('created_at', { ascending: true });
 
@@ -86,19 +85,26 @@ export async function GET(request, context) {
       console.error('Error cargando aprobaciones:', approvalsError);
     }
 
-    const { data: photos } = await supabase
+    const { data: photos, error: photosError } = await supabase
       .from('service_guide_photos')
-      .select('photo_url')
+      .select(`
+        id,
+        photo_url,
+        photo_path,
+        description,
+        created_at
+      `)
       .eq('guide_id', id)
-      .order('created_at', { ascending: true })
-      .limit(1);
+      .order('created_at', { ascending: true });
 
-    const photoUrl = photos?.[0]?.photo_url || null;
+    if (photosError) {
+      console.error('Error cargando fotografías:', photosError);
+    }
 
     const pdfBuffer = await generateGuidePdf({
       guide,
       approvals: approvals || [],
-      photoUrl,
+      photos: photos || [],
     });
 
     return new NextResponse(pdfBuffer, {
