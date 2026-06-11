@@ -12,47 +12,78 @@ export async function POST(request) {
   try {
     const { guide, operatorEmail } = await request.json();
 
-    if (!guide || !guide.id) {
+    if (!guide?.id) {
       return NextResponse.json(
-        { ok: false, message: 'guide es requerido.' },
+        { ok: false, message: 'guide.id es requerido.' },
         { status: 400 }
       );
     }
 
-    if (!operatorEmail) {
+    const { data: fullGuide, error: guideError } = await supabase
+      .from('service_guides')
+      .select(`
+        *,
+        projects (
+          id,
+          project_code,
+          project_name,
+          service_type,
+          purchase_order,
+          location,
+          commune,
+          region,
+          project_manager,
+          quotation_clients (
+            id,
+            name,
+            rut,
+            email,
+            phone,
+            address,
+            contact_name
+          ),
+          holding_companies (
+            id,
+            business_name,
+            logo_url
+          )
+        ),
+        operator:profiles!service_guides_operator_id_fkey (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .eq('id', guide.id)
+      .single();
+
+    if (guideError || !fullGuide) {
       return NextResponse.json(
-        { ok: false, message: 'operatorEmail es requerido.' },
-        { status: 400 }
+        { ok: false, message: 'No se pudo cargar la guía completa.' },
+        { status: 404 }
       );
     }
 
-    const { data: photos, error: photosError } = await supabase
+    const { data: photos } = await supabase
       .from('service_guide_photos')
-      .select('photo_url')
+      .select(`
+        id,
+        photo_url,
+        photo_path,
+        description,
+        created_at
+      `)
       .eq('guide_id', guide.id)
-      .order('created_at', { ascending: true })
-      .limit(1);
+      .order('created_at', { ascending: true });
 
-    if (photosError) {
-      console.error('Error obteniendo foto de la guía:', photosError);
-    }
-
-    console.log('GUIDE ID PARA BUSCAR FOTO:', guide.id);
-    console.log('PHOTOS ENCONTRADAS:', photos);
-
-    const photoUrl = photos?.[0]?.photo_url || null;
-
-    console.log('PHOTO URL PDF:', photoUrl);
-    console.log('SIGNATURE DATA GUIDE:', {
-      signature_url: guide.signature_url,
-      signature_path: guide.signature_path,
-      signature: guide.signature,
+    const pdfBuffer = await generateGuidePdf({
+      guide: fullGuide,
+      approvals: [],
+      photos: photos || [],
     });
 
-const pdfBuffer = await generateGuidePdf(guide, photoUrl);
-
     await sendGuideEmail({
-      guide,
+      guide: fullGuide,
       operatorEmail,
       pdfBuffer,
     });
@@ -65,10 +96,7 @@ const pdfBuffer = await generateGuidePdf(guide, photoUrl);
     console.error('Error enviando correo de guía:', error);
 
     return NextResponse.json(
-      {
-        ok: false,
-        message: error.message || 'Error enviando correo.',
-      },
+      { ok: false, message: error.message || 'Error enviando correo.' },
       { status: 500 }
     );
   }

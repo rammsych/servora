@@ -126,7 +126,7 @@ async function embedLocalImage(pdfDoc, imagePath) {
 export async function generateGuidePdf({
   guide,
   approvals = [],
-  photoUrl = null,
+  photos = [],
 }) {
   const templatePath = path.join(
     process.cwd(),
@@ -207,6 +207,55 @@ export async function generateGuidePdf({
     });
   }
 
+  const pageWidth = width;
+  const pageHeight = height;
+  const contentX = 75;
+  const contentWidth = pageWidth - 150;
+
+  const drawCommonHeader = async (targetPage) => {
+    if (holdingCompany.logo_url) {
+      const companyLogo = await embedImageFromUrl(pdfDoc, holdingCompany.logo_url);
+
+      if (companyLogo) {
+        targetPage.drawImage(companyLogo, {
+          x: 88,
+          y: pageHeight - 120,
+          width: 85,
+          height: 70,
+        });
+      }
+    }
+
+    if (tuvLogo) {
+      targetPage.drawImage(tuvLogo, {
+        x: pageWidth - 210,
+        y: pageHeight - 120,
+        width: 145,
+        height: 75,
+      });
+    }
+  };
+
+  const drawCommonFooter = (targetPage) => {
+    targetPage.drawLine({
+      start: { x: contentX, y: 72 },
+      end: { x: pageWidth - 75, y: 72 },
+      thickness: 0.8,
+      color: rgb(0, 0, 0),
+    });
+
+    targetPage.drawText(
+      'HIDENER SpA / Av. Las Condes 10415 of. 002B SB1 - Las Condes-Santiago / kim.caro@hidener.cl',
+      {
+        x: 105,
+        y: 48,
+        size: 8,
+        font,
+        color: rgb(0.45, 0.45, 0.45),
+      }
+    );
+  };
+
   /**
    * TITULO PRINCIPAL CENTRADO
    */
@@ -226,7 +275,7 @@ export async function generateGuidePdf({
     y: 548,
     size: 16,
     font: bold,
-    color: rgb(0.9, 0.1, 0.08),
+    color: rgb(0, 0, 0),
   });
 
   const informeWidth = bold.widthOfTextAtSize('INFORME ', 16);
@@ -236,7 +285,7 @@ export async function generateGuidePdf({
     y: 548,
     size: 16,
     font: bold,
-    color: rgb(0.26, 0.39, 0.72),
+    color: rgb(0, 0, 0),
   });
 
   /**
@@ -254,7 +303,7 @@ export async function generateGuidePdf({
       projectY,
       15,
       bold,
-      rgb(0.42, 0.65, 0.28),
+      rgb(0, 0, 0),
       width
     );
 
@@ -360,14 +409,248 @@ export async function generateGuidePdf({
   );
 
   /**
-   * PAGINA 2 - DETALLE GUIA
-   */
-  const page = pdfDoc.addPage([595, 842]);
+ * PAGINA 2 - REGISTRO FOTOGRAFICO
+ */
+  const photoPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  const photoPageWidth = pageWidth;
+  const photoPageHeight = pageHeight;
 
-  let y = 790;
+  await drawCommonHeader(photoPage);
+  drawCommonFooter(photoPage);
 
-  page.drawText('DETALLE DE GUIA DE SERVICIO', {
-    x: 50,
+
+
+  // centerText(
+  //   photoPage,
+  //   'REGISTRO FOTOGRÁFICO',
+  //   photoPageHeight - 190,
+  //   16,
+  //   bold,
+  //   rgb(0.05, 0.1, 0.2),
+  //   photoPageWidth
+  // );
+
+  photoPage.drawText('REGISTRO FOTOGRÁFICO', {
+    x: contentX,
+    y: photoPageHeight - 190,
+    size: 16,
+    font: bold,
+    color: rgb(0, 0, 0),
+  });
+
+  photoPage.drawLine({
+    start: { x: contentX, y: photoPageHeight - 198 },
+    end: { x: contentX + contentWidth, y: photoPageHeight - 198 },
+    thickness: 0.8,
+    color: rgb(0, 0, 0),
+  });
+
+  let photoY = photoPageHeight - 240;
+
+  const photoBoxWidth = 420;
+  const photoBoxHeight = 230;
+  const photoBoxX = (photoPageWidth - photoBoxWidth) / 2;
+
+  let currentPhotoPage = photoPage;
+
+  const drawPhotoPageHeader = async (targetPage) => {
+    await drawCommonHeader(targetPage);
+    drawCommonFooter(targetPage);
+  };
+
+  for (const photo of photos || []) {
+    if (photoY - photoBoxHeight < 80) {
+      currentPhotoPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      await drawPhotoPageHeader(currentPhotoPage);
+      photoY = photoPageHeight - 165;
+    }
+
+    const description = String(photo.description || 'Fotografía sin descripción');
+
+    centerText(
+      currentPhotoPage,
+      description,
+      photoY,
+      11,
+      bold,
+      rgb(0, 0, 0),
+      photoPageWidth
+    );
+
+    photoY -= 245;
+
+    const image = await embedImageFromUrl(pdfDoc, photo.photo_url);
+
+    if (image) {
+      const imageRatio = image.width / image.height;
+      const boxRatio = photoBoxWidth / photoBoxHeight;
+
+      let drawWidth = photoBoxWidth;
+      let drawHeight = photoBoxHeight;
+
+      if (imageRatio > boxRatio) {
+        drawHeight = photoBoxWidth / imageRatio;
+      } else {
+        drawWidth = photoBoxHeight * imageRatio;
+      }
+
+      const drawX = photoBoxX + (photoBoxWidth - drawWidth) / 2;
+      const drawY = photoY + (photoBoxHeight - drawHeight) / 2;
+
+      currentPhotoPage.drawRectangle({
+        x: photoBoxX,
+        y: photoY,
+        width: photoBoxWidth,
+        height: photoBoxHeight,
+        borderWidth: 0.5,
+        borderColor: rgb(0.75, 0.75, 0.75),
+      });
+
+      currentPhotoPage.drawImage(image, {
+        x: drawX,
+        y: drawY,
+        width: drawWidth,
+        height: drawHeight,
+      });
+    }
+
+    photoY -= 35;
+  }
+
+  /**
+ * PAGINA 3 - DETALLE GUIA
+ */
+  let page = pdfDoc.addPage([pageWidth, pageHeight]);
+  await drawCommonHeader(page);
+  drawCommonFooter(page);
+
+  let y = 620;
+
+  const ensureSpace = async (neededHeight = 80) => {
+    if (y - neededHeight > 95) return;
+
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    await drawCommonHeader(page);
+    drawCommonFooter(page);
+
+    y = 620;
+  };
+
+  const drawSectionTitle = async (title) => {
+    await ensureSpace(45);
+    page.drawText(title, {
+      x: contentX,
+      y,
+      size: 12,
+      font: bold,
+      color: rgb(0.05, 0.1, 0.2),
+    });
+
+    page.drawLine({
+      start: { x: contentX, y: y - 7 },
+      end: { x: contentX + contentWidth, y: y - 7 },
+      thickness: 0.8,
+      color: rgb(0, 0, 0),
+    });
+
+    y -= 24;
+  };
+
+  const drawInfoRow = async (label, val, rowIndex) => {
+    await ensureSpace(28);
+    const rowHeight = 20;
+    const labelWidth = 155;
+    const rowY = y - rowHeight + 5;
+
+    page.drawRectangle({
+      x: contentX,
+      y: rowY,
+      width: contentWidth,
+      height: rowHeight,
+      color: rowIndex % 2 === 0 ? rgb(0.96, 0.96, 0.96) : rgb(1, 1, 1),
+    });
+
+    page.drawRectangle({
+      x: contentX,
+      y: rowY,
+      width: labelWidth,
+      height: rowHeight,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+
+    page.drawText(`${label}:`, {
+      x: contentX + 8,
+      y: rowY + 6,
+      size: 9,
+      font: bold,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawText(String(value(val)), {
+      x: contentX + labelWidth + 10,
+      y: rowY + 6,
+      size: 9,
+      font,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawRectangle({
+      x: contentX,
+      y: rowY,
+      width: contentWidth,
+      height: rowHeight,
+      borderWidth: 0.4,
+      borderColor: rgb(0.7, 0.7, 0.7),
+    });
+
+    y -= rowHeight;
+  };
+
+  const drawTextBox = async (title, text) => {
+    await ensureSpace(105);
+    const boxHeight = 72;
+
+    page.drawText(title, {
+      x: contentX,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.05, 0.1, 0.2),
+    });
+
+    y -= 12;
+
+    page.drawRectangle({
+      x: contentX,
+      y: y - boxHeight,
+      width: contentWidth,
+      height: boxHeight,
+      borderWidth: 0.5,
+      borderColor: rgb(0.65, 0.65, 0.65),
+      color: rgb(0.99, 0.99, 0.99),
+    });
+
+    const lines = String(value(text)).match(/.{1,90}/g) || ['-'];
+
+    let textY = y - 16;
+
+    lines.slice(0, 4).forEach((line) => {
+      page.drawText(line.trim(), {
+        x: contentX + 10,
+        y: textY,
+        size: 9,
+        font,
+        color: rgb(0, 0, 0),
+      });
+
+      textY -= 13;
+    });
+
+    y -= boxHeight + 20;
+  };
+
+  page.drawText('DETALLE DE GUÍA DE SERVICIO', {
+    x: contentX,
     y,
     size: 16,
     font: bold,
@@ -376,176 +659,138 @@ export async function generateGuidePdf({
 
   y -= 30;
 
-  page.drawText(`N Guia: ${value(guide.guide_number || guide.id)}`, {
-    x: 50,
+  page.drawText(`N° Guía: ${value(guide.guide_number || guide.id)}`, {
+    x: contentX,
     y,
-    size: 12,
+    size: 11,
     font: bold,
+    color: rgb(0, 0, 0),
   });
 
-  y -= 28;
+  y -= 30;
 
-  const rows = [
+  await drawSectionTitle('INFORMACIÓN DE OPERACIONES');
+
+  const operationRows = [
     ['Empresa holding', holdingCompany.business_name],
     ['Proyecto', project.project_name],
-    ['Codigo proyecto', project.project_code],
-    ['Cliente / Institucion', client.name],
+    ['Código proyecto', project.project_code],
+    ['Cliente', client.name],
     ['Orden de compra', project.purchase_order],
-    ['Ubicacion', [project.location, project.commune, project.region].filter(Boolean).join(', ')],
-    ['Fecha servicio', guide.service_date],
+    ['Ubicación', [project.location, project.commune, project.region].filter(Boolean).join(', ')],
+  ];
+
+  for (const [index, row] of operationRows.entries()) {
+    const [label, val] = row;
+    await drawInfoRow(label, val, index);
+  }
+
+  y -= 18;
+
+  await drawSectionTitle('INFORMACIÓN DEL SERVICIO');
+
+  const serviceRows = [
+    ['Fecha servicio', formatDate(guide.service_date)],
     ['Hora ingreso', guide.start_time],
-    ['Hora termino', guide.end_time],
+    ['Hora término', guide.end_time],
     ['Tipo mantenimiento', maintenanceLabel(guide.maintenance_type)],
     ['Tipo actividad', guide.activity_type],
-    ['Instalacion', guide.installation_type],
-    ['N serie', guide.equipment_serial],
+    ['Instalación', guide.installation_type],
+    ['Estado', guide.status],
+  ];
+
+  for (const [index, row] of serviceRows.entries()) {
+    const [label, val] = row;
+    await drawInfoRow(label, val, index);
+  }
+
+  y -= 18;
+
+  await drawSectionTitle('INFORMACIÓN DEL EQUIPO');
+
+  const equipmentRows = [
+    ['N° serie', guide.equipment_serial],
     ['Modelo', guide.equipment_model],
     ['Marca', guide.equipment_brand],
     ['Color', guide.equipment_color],
     ['Voltaje', guide.electrical_voltage],
-    ['Presion / parametro', guide.electrical_pressure],
-    ['Cliente', guide.customer_name],
-    ['RUT cliente', guide.customer_rut],
-    ['Estado', guide.status],
+    ['Presión / parámetro', guide.electrical_pressure],
   ];
 
-  rows.forEach(([label, val]) => {
-    page.drawText(`${label}:`, {
-      x: 50,
-      y,
-      size: 10,
-      font: bold,
-    });
+  for (const [index, row] of equipmentRows.entries()) {
+    const [label, val] = row;
+    await drawInfoRow(label, val, index);
+  }
 
-    page.drawText(String(value(val)), {
-      x: 190,
-      y,
-      size: 10,
-      font,
-    });
+  y -= 22;
 
-    y -= 17;
-  });
+  await drawTextBox('Actividad realizada', guide.activity_description);
+  await drawTextBox('Cambio de componentes', guide.component_changes);
+  await drawTextBox('Observaciones', guide.observations);
 
-  y -= 14;
+  if (guide.latitude && guide.longitude && y > 155) {
+    await drawSectionTitle('UBICACIÓN REGISTRADA');
 
-  const blocks = [
-    ['Actividad realizada', guide.activity_description],
-    ['Cambio de componentes', guide.component_changes],
-    ['Observaciones', guide.observations],
-  ];
-
-  blocks.forEach(([title, text]) => {
-    page.drawText(title, {
-      x: 50,
-      y,
-      size: 12,
-      font: bold,
-    });
-
-    y -= 16;
-
-    const lines = String(value(text)).match(/.{1,85}/g) || ['-'];
-
-    lines.slice(0, 5).forEach((line) => {
-      page.drawText(line, {
-        x: 50,
-        y,
-        size: 10,
-        font,
-      });
-
-      y -= 13;
-    });
-
-    y -= 10;
-  });
-
-  if (guide.latitude && guide.longitude) {
-    page.drawText('Ubicacion registrada', {
-      x: 50,
-      y,
-      size: 12,
-      font: bold,
-    });
+    await drawInfoRow('Latitud', guide.latitude, 0);
+    await drawInfoRow('Longitud', guide.longitude, 1);
 
     y -= 18;
-
-    page.drawText(`Latitud: ${guide.latitude}`, {
-      x: 50,
-      y,
-      size: 10,
-      font,
-    });
-
-    y -= 14;
-
-    page.drawText(`Longitud: ${guide.longitude}`, {
-      x: 50,
-      y,
-      size: 10,
-      font,
-    });
-
-    y -= 25;
   }
-
-  if (photoUrl) {
-    const image = await embedImageFromUrl(pdfDoc, photoUrl);
-
-    if (image) {
-      page.drawText('Fotografia adjunta', {
-        x: 50,
-        y,
-        size: 12,
-        font: bold,
-      });
-
-      y -= 210;
-
-      page.drawImage(image, {
-        x: 50,
-        y,
-        width: 250,
-        height: 190,
-      });
-    }
-  }
-
-  y -= 40;
 
   if (guide.customer_signature_url) {
+    await ensureSpace(190);
+
     const signatureImage = await embedImageFromUrl(
       pdfDoc,
       guide.customer_signature_url
     );
 
     if (signatureImage) {
-      page.drawText('Firma cliente', {
-        x: 220,
+      const signatureBoxHeight = 150;
+      const signatureBoxY = y - signatureBoxHeight;
+
+      page.drawText('FIRMA CLIENTE', {
+        x: contentX,
         y,
         size: 12,
         font: bold,
-      });
-
-      y -= 100;
-
-      page.drawImage(signatureImage, {
-        x: 200,
-        y,
-        width: 200,
-        height: 80,
+        color: rgb(0, 0, 0),
       });
 
       page.drawLine({
-        start: { x: 180, y: y - 10 },
-        end: { x: 420, y: y - 10 },
-        thickness: 1,
+        start: { x: contentX, y: y - 8 },
+        end: { x: contentX + contentWidth, y: y - 8 },
+        thickness: 0.8,
         color: rgb(0, 0, 0),
       });
+
+
+
+      page.drawImage(signatureImage, {
+        x: contentX + 150,
+        y: signatureBoxY + 45,
+        width: 180,
+        height: 65,
+      });
+
+      page.drawLine({
+        start: { x: contentX + 110, y: signatureBoxY + 35 },
+        end: { x: contentX + contentWidth - 110, y: signatureBoxY + 35 },
+        thickness: 0.8,
+        color: rgb(0, 0, 0),
+      });
+
+      page.drawText('Firma cliente', {
+        x: contentX + 175,
+        y: signatureBoxY + 18,
+        size: 8,
+        font,
+        color: rgb(0.35, 0.35, 0.35),
+      });
+
+      y = signatureBoxY - 20;
     }
   }
-
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }

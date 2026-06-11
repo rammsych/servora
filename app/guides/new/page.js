@@ -210,6 +210,7 @@ export default function NewGuidePage({ adminMode = false }) {
     const newPhotos = selectedFiles.map((file) => ({
       id: crypto.randomUUID(),
       file,
+      description: '',
       previewUrl: URL.createObjectURL(file),
     }));
 
@@ -217,6 +218,20 @@ export default function NewGuidePage({ adminMode = false }) {
     setPhotoPreviews((prev) => [...prev, ...newPhotos]);
 
     e.target.value = '';
+  };
+
+  const handlePhotoDescriptionChange = (photoId, value) => {
+    setPhotos((prev) =>
+      prev.map((photo) =>
+        photo.id === photoId ? { ...photo, description: value } : photo
+      )
+    );
+
+    setPhotoPreviews((prev) =>
+      prev.map((photo) =>
+        photo.id === photoId ? { ...photo, description: value } : photo
+      )
+    );
   };
 
   const removePhoto = (photoId) => {
@@ -246,6 +261,16 @@ export default function NewGuidePage({ adminMode = false }) {
 
     if (!form.project_id) {
       setMessage('Debes seleccionar un proyecto.');
+      setLoading(false);
+      return;
+    }
+
+    const photosWithoutDescription = photos.filter(
+      (photo) => !photo.description || !photo.description.trim()
+    );
+
+    if (photosWithoutDescription.length > 0) {
+      setMessage('Cada foto adjunta debe tener una descripción obligatoria.');
       setLoading(false);
       return;
     }
@@ -351,6 +376,7 @@ export default function NewGuidePage({ adminMode = false }) {
         guide_id: createdGuide.id,
         photo_url: publicUrlData.publicUrl,
         photo_path: filePath,
+        description: photo.description.trim(),
       });
     }
 
@@ -712,11 +738,20 @@ export default function NewGuidePage({ adminMode = false }) {
           {photoPreviews.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {photoPreviews.map((photo) => (
-                <div key={photo.id} className="relative group">
+                <div key={photo.id} className="relative group rounded-2xl border border-white/10 bg-[#0f172a] p-3">
                   <img
                     src={photo.previewUrl}
                     alt="Foto del servicio"
-                    className="w-full h-32 object-cover rounded-2xl border border-white/10"
+                    className="w-full h-32 object-cover rounded-xl border border-white/10"
+                  />
+
+                  <textarea
+                    value={photo.description}
+                    onChange={(e) => handlePhotoDescriptionChange(photo.id, e.target.value)}
+                    placeholder="Descripción obligatoria de la fotografía"
+                    required
+                    rows={3}
+                    className="mt-3 w-full rounded-xl border border-white/10 bg-[#020617] px-3 py-2 text-sm text-white placeholder:text-gray-500 outline-none focus:border-cyan-400"
                   />
 
                   <button
