@@ -458,70 +458,26 @@ export async function generateGuidePdf({
     drawCommonFooter(targetPage);
   };
 
-  const wrapText = (text, maxWidth, textFont, fontSize) => {
-    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) return ['-'];
-
-    const lines = [];
-    let line = '';
-
-    for (const word of words) {
-      const candidate = line ? `${line} ${word}` : word;
-
-      if (textFont.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
-        line = candidate;
-      } else {
-        if (line) lines.push(line);
-        line = word;
-      }
-    }
-
-    if (line) lines.push(line);
-    return lines;
-  };
-
   for (const photo of photos || []) {
-    const description = String(
-      photo.description || 'Fotografía sin descripción'
-    ).trim();
-
-    // Texto normal, alineado a la izquierda y encuadrado al mismo ancho de la foto.
-    // Así evitamos que descripciones largas salgan de la página.
-    const descriptionFontSize = 9;
-    const descriptionLineHeight = 12;
-    const descriptionLines = wrapText(
-      description,
-      photoBoxWidth,
-      font,
-      descriptionFontSize
-    );
-    const descriptionHeight =
-      Math.max(descriptionLines.length, 1) * descriptionLineHeight;
-
-    const requiredHeight =
-      descriptionHeight + 12 + photoBoxHeight + 34;
-
-    if (photoY - requiredHeight < 85) {
+    if (photoY - photoBoxHeight < 80) {
       currentPhotoPage = pdfDoc.addPage([pageWidth, pageHeight]);
       await drawPhotoPageHeader(currentPhotoPage);
       photoY = photoPageHeight - 165;
     }
 
-    let descriptionY = photoY;
+    const description = String(photo.description || 'Fotografía sin descripción');
 
-    for (const line of descriptionLines) {
-      currentPhotoPage.drawText(line, {
-        x: photoBoxX,
-        y: descriptionY,
-        size: descriptionFontSize,
-        font,
-        color: rgb(0.12, 0.12, 0.12),
-      });
+    centerText(
+      currentPhotoPage,
+      description,
+      photoY,
+      11,
+      bold,
+      rgb(0, 0, 0),
+      photoPageWidth
+    );
 
-      descriptionY -= descriptionLineHeight;
-    }
-
-    photoY = descriptionY - 12;
+    photoY -= 245;
 
     const image = await embedImageFromUrl(pdfDoc, photo.photo_url);
 
@@ -539,15 +495,15 @@ export async function generateGuidePdf({
       }
 
       const drawX = photoBoxX + (photoBoxWidth - drawWidth) / 2;
-      const drawY = photoY - photoBoxHeight + (photoBoxHeight - drawHeight) / 2;
+      const drawY = photoY + (photoBoxHeight - drawHeight) / 2;
 
       currentPhotoPage.drawRectangle({
         x: photoBoxX,
-        y: photoY - photoBoxHeight,
+        y: photoY,
         width: photoBoxWidth,
         height: photoBoxHeight,
         borderWidth: 0.5,
-        borderColor: rgb(0.82, 0.82, 0.82),
+        borderColor: rgb(0.75, 0.75, 0.75),
       });
 
       currentPhotoPage.drawImage(image, {
@@ -558,7 +514,7 @@ export async function generateGuidePdf({
       });
     }
 
-    photoY -= photoBoxHeight + 34;
+    photoY -= 35;
   }
 
   /**

@@ -216,8 +216,9 @@ export default function AdminShell({ children }) {
 
   return (
     <div className="min-h-screen bg-[#0a0f1c] text-white">
-      <aside className="fixed left-0 top-0 hidden h-screen w-72 border-r border-white/10 bg-[#080d18] p-5 lg:block">
-        <div className="mb-8 flex items-center gap-3">
+      <aside className="fixed left-0 top-0 hidden h-screen w-72 flex-col border-r border-white/10 bg-[#080d18] lg:flex">
+        <div className="shrink-0 px-5 pt-5">
+          <div className="mb-8 flex items-center gap-3">
           <Image
             src="/brand/servora-icon.png"
             alt="SERVORA"
@@ -228,7 +229,7 @@ export default function AdminShell({ children }) {
 
           <div>
             <h1 className="text-lg font-bold">SERVORA</h1>
-            <p className="text-xs text-gray-400">Back Office  1.0.7</p>
+            <p className="text-xs text-gray-400">Back Office  1.3.0</p>
           </div>
         </div>
 
@@ -251,9 +252,10 @@ export default function AdminShell({ children }) {
               {roleLabel}
             </p>
           </div>
+          </div>
         </div>
 
-        <nav className="space-y-4">
+        <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-5 pr-3 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]">
           {menuItems.map((section) => (
             <div key={section.section} className="space-y-2">
               <p className="px-4 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
@@ -355,13 +357,15 @@ export default function AdminShell({ children }) {
           ))}
         </nav>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5"
-        >
-          Salir
-        </button>
+        <div className="shrink-0 border-t border-white/10 bg-[#080d18] px-5 py-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full rounded-2xl border border-white/10 bg-[#0d1422] px-4 py-3 text-sm font-semibold text-gray-300 transition hover:border-cyan-400/20 hover:bg-white/5 hover:text-white"
+          >
+            Salir
+          </button>
+        </div>
       </aside>
 
       <div className="lg:pl-72">
