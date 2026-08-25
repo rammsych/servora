@@ -22,9 +22,19 @@ export default function NewGuidePage({ adminMode = false }) {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [photos, setPhotos] = useState([]);
-  const [photoPreviews, setPhotoPreviews] = useState([]);
   const [signature, setSignature] = useState(null);
+  const [services, setServices] = useState([
+    {
+      id: 'service-1',
+      beforeDescription: '',
+      beforePhoto: null,
+      beforePreview: '',
+      afterDescription: '',
+      afterPhoto: null,
+      afterPreview: '',
+      observations: '',
+    },
+  ]);
 
   const [holdingCompanies, setHoldingCompanies] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -204,39 +214,106 @@ export default function NewGuidePage({ adminMode = false }) {
     });
   };
 
-  const handlePhotoChange = (e) => {
-    const selectedFiles = Array.from(e.target.files || []);
-
-    const newPhotos = selectedFiles.map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      description: '',
-      previewUrl: URL.createObjectURL(file),
-    }));
-
-    setPhotos((prev) => [...prev, ...newPhotos]);
-    setPhotoPreviews((prev) => [...prev, ...newPhotos]);
-
-    e.target.value = '';
-  };
-
-  const handlePhotoDescriptionChange = (photoId, value) => {
-    setPhotos((prev) =>
-      prev.map((photo) =>
-        photo.id === photoId ? { ...photo, description: value } : photo
-      )
-    );
-
-    setPhotoPreviews((prev) =>
-      prev.map((photo) =>
-        photo.id === photoId ? { ...photo, description: value } : photo
+  const updateService = (serviceId, field, value) => {
+    setServices((prev) =>
+      prev.map((service) =>
+        service.id === serviceId
+          ? { ...service, [field]: value }
+          : service
       )
     );
   };
 
-  const removePhoto = (photoId) => {
-    setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
-    setPhotoPreviews((prev) => prev.filter((photo) => photo.id !== photoId));
+  const handleServicePhoto = (serviceId, type, file) => {
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setServices((prev) =>
+      prev.map((service) => {
+        if (service.id !== serviceId) return service;
+
+        if (type === 'before') {
+          if (service.beforePreview) {
+            URL.revokeObjectURL(service.beforePreview);
+          }
+
+          return {
+            ...service,
+            beforePhoto: file,
+            beforePreview: previewUrl,
+          };
+        }
+
+        if (service.afterPreview) {
+          URL.revokeObjectURL(service.afterPreview);
+        }
+
+        return {
+          ...service,
+          afterPhoto: file,
+          afterPreview: previewUrl,
+        };
+      })
+    );
+  };
+
+  const addService = () => {
+    setServices((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        beforeDescription: '',
+        beforePhoto: null,
+        beforePreview: '',
+        afterDescription: '',
+        afterPhoto: null,
+        afterPreview: '',
+        observations: '',
+      },
+    ]);
+  };
+
+  const removeService = (serviceId) => {
+    setServices((prev) => {
+      if (prev.length === 1) return prev;
+
+      const serviceToRemove = prev.find(
+        (service) => service.id === serviceId
+      );
+
+      if (serviceToRemove?.beforePreview) {
+        URL.revokeObjectURL(serviceToRemove.beforePreview);
+      }
+
+      if (serviceToRemove?.afterPreview) {
+        URL.revokeObjectURL(serviceToRemove.afterPreview);
+      }
+
+      return prev.filter((service) => service.id !== serviceId);
+    });
+  };
+
+  const uploadServicePhoto = async (guideId, serviceOrder, type, file) => {
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const filePath = `${guideId}/services/${serviceOrder}-${type}-${crypto.randomUUID()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('service-guide-photos')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('service-guide-photos')
+      .getPublicUrl(filePath);
+
+    return {
+      url: publicUrlData.publicUrl,
+      path: filePath,
+    };
   };
 
   const handleSubmit = async (e) => {
@@ -265,45 +342,70 @@ export default function NewGuidePage({ adminMode = false }) {
       return;
     }
 
-    const photosWithoutDescription = photos.filter(
-      (photo) => !photo.description || !photo.description.trim()
+    const incompleteServiceIndex = services.findIndex(
+      (service) =>
+        !service.beforePhoto ||
+        !service.beforeDescription.trim() ||
+        !service.afterPhoto ||
+        !service.afterDescription.trim()
     );
 
-    if (photosWithoutDescription.length > 0) {
-      setMessage('Cada foto adjunta debe tener una descripción obligatoria.');
+    if (incompleteServiceIndex !== -1) {
+      setMessage(
+        `Completa la foto y descripción de Antes y Después en el Servicio ${incompleteServiceIndex + 1}.`
+      );
       setLoading(false);
       return;
     }
 
     const location = await getLocation();
 
+    const legacyActivityDescription = services
+      .map(
+        (service, index) =>
+          `Servicio ${index + 1}
+Trabajo a realizar: ${service.beforeDescription.trim()}
+Trabajo realizado: ${service.afterDescription.trim()}`
+      )
+      .join('\n\n');
+
+    const legacyObservations = services
+      .map((service, index) => {
+        const text = service.observations.trim();
+        return text ? `Servicio ${index + 1}: ${text}` : '';
+      })
+      .filter(Boolean)
+      .join('\n\n');
+
+    const guidePayload = {
+      operator_id: user.id,
+      project_id: form.project_id || null,
+      service_date: form.service_date || new Date().toISOString().slice(0, 10),
+      start_time: form.start_time || null,
+      end_time: form.end_time || null,
+      maintenance_type: form.maintenance_type,
+      activity_type: form.activity_type,
+      installation_type: form.installation_type,
+      equipment_serial: form.equipment_serial,
+      equipment_model: form.equipment_model,
+      equipment_brand: form.equipment_brand,
+      equipment_color: form.equipment_color,
+      electrical_voltage: form.electrical_voltage,
+      electrical_pressure: form.electrical_pressure,
+      activity_description: legacyActivityDescription,
+      component_changes: '',
+      observations: legacyObservations,
+      customer_name: form.customer_name,
+      customer_rut: form.customer_rut,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      location_accuracy: location.location_accuracy,
+      status: 'submitted',
+    };
+
     const { data: createdGuide, error } = await supabase
       .from('service_guides')
-      .insert({
-        operator_id: user.id,
-        project_id: form.project_id || null,
-        service_date: form.service_date || new Date().toISOString().slice(0, 10),
-        start_time: form.start_time || null,
-        end_time: form.end_time || null,
-        maintenance_type: form.maintenance_type,
-        activity_type: form.activity_type,
-        installation_type: form.installation_type,
-        equipment_serial: form.equipment_serial,
-        equipment_model: form.equipment_model,
-        equipment_brand: form.equipment_brand,
-        equipment_color: form.equipment_color,
-        electrical_voltage: form.electrical_voltage,
-        electrical_pressure: form.electrical_pressure,
-        activity_description: form.activity_description,
-        component_changes: form.component_changes,
-        observations: form.observations,
-        customer_name: form.customer_name,
-        customer_rut: form.customer_rut,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        location_accuracy: location.location_accuracy,
-        status: 'submitted',
-      })
+      .insert(guidePayload)
       .select('id, guide_number')
       .single();
 
@@ -354,30 +456,84 @@ export default function NewGuidePage({ adminMode = false }) {
       }
     }
 
-    for (const photo of photos) {
-      const file = photo.file;
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${createdGuide.id}/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
+    const savedServices = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from('service-guide-photos')
-        .upload(filePath, file);
+    try {
+      for (let index = 0; index < services.length; index += 1) {
+        const service = services[index];
+        const serviceOrder = index + 1;
 
-      if (uploadError) {
-        console.error(uploadError);
-        continue;
+        const beforeImage = await uploadServicePhoto(
+          createdGuide.id,
+          serviceOrder,
+          'before',
+          service.beforePhoto
+        );
+
+        const afterImage = await uploadServicePhoto(
+          createdGuide.id,
+          serviceOrder,
+          'after',
+          service.afterPhoto
+        );
+
+        const servicePayload = {
+          guide_id: createdGuide.id,
+          service_order: serviceOrder,
+          before_description: service.beforeDescription.trim(),
+          before_photo_url: beforeImage.url,
+          before_photo_path: beforeImage.path,
+          after_description: service.afterDescription.trim(),
+          after_photo_url: afterImage.url,
+          after_photo_path: afterImage.path,
+          observations: service.observations.trim() || null,
+        };
+
+        const { data: savedService, error: serviceError } = await supabase
+          .from('service_guide_services')
+          .insert(servicePayload)
+          .select('*')
+          .single();
+
+        if (serviceError) {
+          throw serviceError;
+        }
+
+        savedServices.push(savedService);
+
+        // Compatibilidad temporal con las guías/PDF actuales.
+        // Cuando migremos el PDF a service_guide_services podremos retirar este bloque.
+        const { error: legacyPhotosError } = await supabase
+          .from('service_guide_photos')
+          .insert([
+            {
+              guide_id: createdGuide.id,
+              photo_url: beforeImage.url,
+              photo_path: beforeImage.path,
+              description: `Servicio ${serviceOrder} - Antes: ${service.beforeDescription.trim()}`,
+            },
+            {
+              guide_id: createdGuide.id,
+              photo_url: afterImage.url,
+              photo_path: afterImage.path,
+              description: `Servicio ${serviceOrder} - Después: ${service.afterDescription.trim()}`,
+            },
+          ]);
+
+        if (legacyPhotosError) {
+          console.error(
+            'No fue posible registrar las fotos en la estructura anterior:',
+            legacyPhotosError
+          );
+        }
       }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('service-guide-photos')
-        .getPublicUrl(filePath);
-
-      await supabase.from('service_guide_photos').insert({
-        guide_id: createdGuide.id,
-        photo_url: publicUrlData.publicUrl,
-        photo_path: filePath,
-        description: photo.description.trim(),
-      });
+    } catch (serviceSaveError) {
+      console.error('Error guardando detalle del trabajo:', serviceSaveError);
+      setMessage(
+        'La guía fue creada, pero ocurrió un error al guardar el detalle del trabajo.'
+      );
+      setLoading(false);
+      return;
     }
 
     try {
@@ -391,13 +547,9 @@ export default function NewGuidePage({ adminMode = false }) {
           guide: {
             id: createdGuide.id,
             guide_number: createdGuide.guide_number,
-            project_id: form.project_id,
             holding_company_id: form.holding_company_id,
-            ...form,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            location_accuracy: location.location_accuracy,
-            status: 'submitted',
+            ...guidePayload,
+            services: savedServices,
           },
           operatorEmail: user.email,
         }),
@@ -604,84 +756,202 @@ export default function NewGuidePage({ adminMode = false }) {
           </div>
         </Card>
 
-        <Card>
-          <SectionTitle
-            title="Equipo intervenido"
-            description="Información técnica del equipo o sistema."
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Número de serie"
-              name="equipment_serial"
-              value={form.equipment_serial}
-              onChange={handleChange}
-            />
-
-            <Input
-              label="Modelo"
-              name="equipment_model"
-              value={form.equipment_model}
-              onChange={handleChange}
-            />
-
-            <Input
-              label="Marca"
-              name="equipment_brand"
-              value={form.equipment_brand}
-              onChange={handleChange}
-            />
-
-            <Input
-              label="Color"
-              name="equipment_color"
-              value={form.equipment_color}
-              onChange={handleChange}
-            />
-
-            <Input
-              label="Voltaje"
-              name="electrical_voltage"
-              value={form.electrical_voltage}
-              onChange={handleChange}
-            />
-
-            <Input
-              label="Presión / parámetro"
-              name="electrical_pressure"
-              value={form.electrical_pressure}
-              onChange={handleChange}
-            />
-          </div>
-        </Card>
+      
 
         <Card>
           <SectionTitle
             title="Detalle del trabajo"
-            description="Describe lo realizado y observaciones importantes."
+            description="Registra la evidencia antes y después de cada servicio realizado."
           />
 
-          <div className="space-y-4">
-            <Textarea
-              label="Actividad realizada"
-              name="activity_description"
-              value={form.activity_description}
-              onChange={handleChange}
-            />
+          <div className="space-y-6">
+            {services.map((service, index) => (
+              <div
+                key={service.id}
+                className="rounded-2xl border border-white/10 bg-[#0f172a] p-5"
+              >
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                      Detalle del trabajo
+                    </p>
+                    <h4 className="mt-1 text-base font-semibold text-white">
+                      Servicio {index + 1}
+                    </h4>
+                  </div>
 
-            <Textarea
-              label="Cambio de componentes"
-              name="component_changes"
-              value={form.component_changes}
-              onChange={handleChange}
-            />
+                  {services.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeService(service.id)}
+                      className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-300 transition hover:bg-red-500/20"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </div>
 
-            <Textarea
-              label="Observaciones"
-              name="observations"
-              value={form.observations}
-              onChange={handleChange}
-            />
+                <div className="space-y-6">
+                  <div>
+                    <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-cyan-300">
+                      Antes
+                    </p>
+
+                    <label className="block">
+                      <span className="flex min-h-32 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-cyan-400/30 bg-[#020617] px-4 py-6 text-center transition hover:bg-cyan-400/5">
+                        {service.beforePreview ? (
+                          <img
+                            src={service.beforePreview}
+                            alt={`Antes servicio ${index + 1}`}
+                            className="max-h-64 w-full rounded-xl object-contain"
+                          />
+                        ) : (
+                          <>
+                            <span className="mb-2 text-3xl">📷</span>
+                            <span className="text-sm font-semibold text-white">
+                              + Agregar foto antes
+                            </span>
+                            <span className="mt-1 text-xs text-gray-400">
+                              Cámara o galería del dispositivo
+                            </span>
+                          </>
+                        )}
+                      </span>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => {
+                          handleServicePhoto(
+                            service.id,
+                            'before',
+                            e.target.files?.[0]
+                          );
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+
+                    <label className="mt-4 block">
+                      <span className="mb-2 block text-sm font-medium text-gray-300">
+                        Breve descripción del trabajo a realizar
+                      </span>
+                      <textarea
+                        rows={4}
+                        required
+                        value={service.beforeDescription}
+                        onChange={(e) =>
+                          updateService(
+                            service.id,
+                            'beforeDescription',
+                            e.target.value
+                          )
+                        }
+                        placeholder="Describe brevemente el trabajo que se realizará..."
+                        className="w-full rounded-xl border border-white/10 bg-[#020617] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="border-t border-white/10" />
+
+                  <div>
+                    <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-300">
+                      Después
+                    </p>
+
+                    <label className="block">
+                      <span className="flex min-h-32 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-400/30 bg-[#020617] px-4 py-6 text-center transition hover:bg-emerald-400/5">
+                        {service.afterPreview ? (
+                          <img
+                            src={service.afterPreview}
+                            alt={`Después servicio ${index + 1}`}
+                            className="max-h-64 w-full rounded-xl object-contain"
+                          />
+                        ) : (
+                          <>
+                            <span className="mb-2 text-3xl">📷</span>
+                            <span className="text-sm font-semibold text-white">
+                              + Agregar foto después
+                            </span>
+                            <span className="mt-1 text-xs text-gray-400">
+                              Cámara o galería del dispositivo
+                            </span>
+                          </>
+                        )}
+                      </span>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => {
+                          handleServicePhoto(
+                            service.id,
+                            'after',
+                            e.target.files?.[0]
+                          );
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+
+                    <label className="mt-4 block">
+                      <span className="mb-2 block text-sm font-medium text-gray-300">
+                        Detalle del trabajo realizado
+                      </span>
+                      <textarea
+                        rows={4}
+                        required
+                        value={service.afterDescription}
+                        onChange={(e) =>
+                          updateService(
+                            service.id,
+                            'afterDescription',
+                            e.target.value
+                          )
+                        }
+                        placeholder="Describe detalladamente el trabajo realizado..."
+                        className="w-full rounded-xl border border-white/10 bg-[#020617] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="border-t border-white/10" />
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-medium text-gray-300">
+                      Observaciones
+                    </span>
+                    <textarea
+                      rows={4}
+                      value={service.observations}
+                      onChange={(e) =>
+                        updateService(
+                          service.id,
+                          'observations',
+                          e.target.value
+                        )
+                      }
+                      placeholder="Observaciones adicionales del servicio..."
+                      className="w-full rounded-xl border border-white/10 bg-[#020617] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addService}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-cyan-400/40 bg-cyan-400/5 px-5 py-4 text-sm font-semibold text-cyan-300 transition hover:border-cyan-300 hover:bg-cyan-400/10 hover:text-white"
+            >
+              <span className="text-xl">+</span>
+              Agregar otro servicio
+            </button>
           </div>
         </Card>
 
@@ -706,65 +976,6 @@ export default function NewGuidePage({ adminMode = false }) {
               onChange={handleChange}
             />
           </div>
-        </Card>
-
-        <Card>
-          <SectionTitle
-            title="Fotos del servicio"
-            description="Puedes tomar una foto con la cámara o adjuntar imágenes desde el celular."
-          />
-
-          <label className="block">
-            <span className="flex min-h-28 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-cyan-400/30 bg-[#0f172a] px-4 py-6 text-center hover:bg-cyan-400/5">
-              <span className="text-3xl mb-2">📷</span>
-              <span className="text-sm font-semibold text-white">
-                + Agregar foto
-              </span>
-              <span className="text-xs text-gray-400 mt-1">
-                Cámara o galería del dispositivo
-              </span>
-            </span>
-
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              multiple
-              onChange={handlePhotoChange}
-              className="hidden"
-            />
-          </label>
-
-          {photoPreviews.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-              {photoPreviews.map((photo) => (
-                <div key={photo.id} className="relative group rounded-2xl border border-white/10 bg-[#0f172a] p-3">
-                  <img
-                    src={photo.previewUrl}
-                    alt="Foto del servicio"
-                    className="w-full h-32 object-cover rounded-xl border border-white/10"
-                  />
-
-                  <textarea
-                    value={photo.description}
-                    onChange={(e) => handlePhotoDescriptionChange(photo.id, e.target.value)}
-                    placeholder="Descripción obligatoria de la fotografía"
-                    required
-                    rows={3}
-                    className="mt-3 w-full rounded-xl border border-white/10 bg-[#020617] px-3 py-2 text-sm text-white placeholder:text-gray-500 outline-none focus:border-cyan-400"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(photo.id)}
-                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 font-bold shadow-lg hover:bg-red-500"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </Card>
 
         <Card>
@@ -881,20 +1092,3 @@ function Select({ label, name, value, onChange, children }) {
   );
 }
 
-function Textarea({ label, name, value, onChange }) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-gray-300 mb-2">
-        {label}
-      </span>
-
-      <textarea
-        name={name}
-        value={value}
-        onChange={onChange}
-        rows={4}
-        className="w-full rounded-xl border border-white/10 bg-[#0f172a] px-4 py-3 text-white outline-none placeholder:text-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
-      />
-    </label>
-  );
-}
